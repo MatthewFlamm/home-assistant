@@ -1,4 +1,3 @@
-
 """
 Support for NWS weather service.
 
@@ -6,7 +5,7 @@ For more details about this platform, please refer to the documentation at
 https://home-assistant.io/components/weather.nws/
 """
 import logging
-from datetime import timedelta, datetime
+from datetime import timedelta
 from collections import OrderedDict
 import async_timeout
 import voluptuous as vol
@@ -15,8 +14,8 @@ from homeassistant.components.weather import (
     WeatherEntity, PLATFORM_SCHEMA, ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_TEMP,
     ATTR_FORECAST_TIME, ATTR_FORECAST_WIND_SPEED,
-    ATTR_FORECAST_WIND_BEARING) 
-from homeassistant.helpers.temperature import display_temp as show_temp
+    ATTR_FORECAST_WIND_BEARING)
+
 from homeassistant.const import \
     CONF_NAME, TEMP_CELSIUS, CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -45,7 +44,7 @@ CONDITION_CLASSES = OrderedDict([
     ('pouring', []),
     ('rainy', ['rain', 'rain_showers', 'rain_showers_hi']),
     ('windy-variant', ['wind_bkn', 'wind_ovc']),
-    ('windy', ['wind_skc', 'wind_few', 'wind_sct' ]),
+    ('windy', ['wind_skc', 'wind_few', 'wind_sct']),
     ('fog', ['fog']),
     ('clear', ['skc']),  # sunny and clear-night
     ('cloudy', ['bkn', 'ovc']),
@@ -68,21 +67,23 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 def convert_condition(code):
+    """Converts NWS codes to HA condition"""
     time = code[0]
     weather = code[1]
     conditions = [w[0] for w in weather]
-    prec = [w[1] for w in weather]
+    # Precipitation probability not currently used.
+    #prec = [w[1] for w in weather]
 
-    # choose condition with highest priority
+    # Choose condition with highest priority.
     cond = next((k for k, v in CONDITION_CLASSES.items()
-                     if any(c in v for c in conditions)),conditions[0])
-    
+                 if any(c in v for c in conditions)), conditions[0])
+
     if cond == 'clear':
         if time == 'day':
             return 'sunny'
-        elif time == 'night':
+        if time == 'night':
             return 'clear-night'
-        
+
     return cond
 
 async def async_setup_platform(hass, config, async_add_entities,
@@ -91,9 +92,9 @@ async def async_setup_platform(hass, config, async_add_entities,
     latitude = config.get(CONF_LATITUDE, hass.config.latitude)
     longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
     stations = config.get(CONF_STATION).split(',')
-    if stations[0]=='':
-        stations=[]
-    
+    if stations[0] == '':
+        stations = []
+
     if None in (latitude, longitude):
         _LOGGER.error("Latitude or longitude not set in Home Assistant config")
         return
@@ -103,11 +104,11 @@ async def async_setup_platform(hass, config, async_add_entities,
     websession = async_get_clientsession(hass)
     with async_timeout.timeout(10, loop=hass.loop):
         nws = NWS((float(latitude), float(longitude)),
-                                websession, stations=stations)
+                  websession, stations=stations)
         await nws.get_station()
     _LOGGER.info("Initializing for coordinates %s, %s -> station %s",
-                  latitude, longitude,
-                  nws.stations)
+                 latitude, longitude,
+                 nws.stations)
 
     async_add_entities([NWSWeather(nws, config)], True)
 
@@ -120,20 +121,20 @@ class NWSWeather(WeatherEntity):
         self._nws = nws
         self._station_name = config.get(CONF_NAME, self._nws.station)
         self._description = None
-        
+
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
         """Update Condition."""
         with async_timeout.timeout(10, loop=self.hass.loop):
             _LOGGER.info("Updating stations %s",
-                         self._nws.stations)                        
+                         self._nws.stations)
             await self._nws.observation_update()
             _LOGGER.info("Updating forecast")
             await self._nws.forecast_update()
 
         _LOGGER.info("%s",
-                      self._nws.weather_code_all)
-        
+                     self._nws.weather_code_all)
+
     @property
     def attribution(self):
         """Return the attribution."""
@@ -154,9 +155,8 @@ class NWSWeather(WeatherEntity):
         """Return the current pressure."""
         if self._nws.pressure is not None:
             return round(self._nws.pressure / 3386.39, 2)
-        else:
-            return None
-        
+        return None
+
     @property
     def humidity(self):
         """Return the name of the sensor."""
@@ -168,8 +168,7 @@ class NWSWeather(WeatherEntity):
         # covert to mi/hr from m/s
         if self._nws.wind_speed is not None:
             return round(self._nws.wind_speed * 2.237)
-        else:
-            return None
+        return None
 
     @property
     def wind_bearing(self):
@@ -185,10 +184,8 @@ class NWSWeather(WeatherEntity):
     def device_state_attributes(self):
         """Return the state attributes."""
         data = dict()
-
         if self._description:
             data[ATTR_WEATHER_DESCRIPTION] = self._description
-
         return data
 
     @property
@@ -200,8 +197,7 @@ class NWSWeather(WeatherEntity):
         #convert to mi from m
         if self._nws.visibility is not None:
             return round(self._nws.visibility / 1609.34)
-        else:
-            return None
+        return None
 
     @property
     def forecast(self):
@@ -209,7 +205,6 @@ class NWSWeather(WeatherEntity):
         for forecast_entry in self._nws.forecast:
             data = {attr: forecast_entry[name]
                     for attr, name in FORECAST_CLASSES.items()}
-            
             data[ATTR_FORECAST_CONDITION] = convert_condition(forecast_entry['weather_code'])
 
             forecast.append(data)

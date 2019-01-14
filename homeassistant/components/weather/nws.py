@@ -5,23 +5,25 @@ For more details about this platform, please refer to the documentation at
 https://home-assistant.io/components/weather.nws/
 """
 import logging
-from datetime import timedelta
 from collections import OrderedDict
+from datetime import timedelta
+
 import async_timeout
 import voluptuous as vol
 
 from homeassistant.components.weather import (
     WeatherEntity, PLATFORM_SCHEMA, ATTR_FORECAST_CONDITION,
-    ATTR_FORECAST_TEMP,
-    ATTR_FORECAST_TIME, ATTR_FORECAST_WIND_SPEED,
-    ATTR_FORECAST_WIND_BEARING)
-
-from homeassistant.const import \
-    CONF_NAME, TEMP_CELSIUS, CONF_LATITUDE, CONF_LONGITUDE
+    ATTR_FORECAST_PRECIPITATION, ATTR_FORECAST_TEMP, ATTR_FORECAST_TIME,
+    ATTR_FORECAST_WIND_SPEED, ATTR_FORECAST_WIND_BEARING)
+from homeassistant.const import LENGTH_METERS, LENGTH_MILES
+from homeassistant.const import (CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE,
+                                 LENGTH_METERS, LENGTH_MILES, TEMP_CELSIUS,
+                                 TEMP_FAHRENHEIT)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import Throttle
-
+from homeassistant.util.distance import convert as convert_distance
+from homeassistant.util.temperature import convert as convert_temperature
 REQUIREMENTS = ['pynws']
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,8 +35,11 @@ ATTR_WEATHER_DESCRIPTION = 'https://www.weather.gov'
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=30)
 
 CONF_STATION = 'station'
+CONF_USERID = 'userid'
 
-# ordered so that a single condition can be chosen from multiple weather codes
+ATTR_FORECAST_PRECIP_PROB = 'precipitation_probability'
+
+# Ordered so that a single condition can be chosen from multiple weather codes.
 CONDITION_CLASSES = OrderedDict([
     ('snowy', ['snow', 'snow_sleet', 'sleet', 'blizzard']),
     ('snowy-rainy', ['rain_snow', 'rain_sleet', 'fzra', 'rain_fzra', 'snow_fzra']),
@@ -52,31 +57,50 @@ CONDITION_CLASSES = OrderedDict([
 ])
 
 FORECAST_CLASSES = {
-    ATTR_FORECAST_TEMP: 'temperature',
+
     ATTR_FORECAST_TIME: 'startTime',
-    ATTR_FORECAST_WIND_SPEED: 'windSpeed',
-    ATTR_FORECAST_WIND_BEARING: 'windDirection'
+    ATTR_FORECAST_WIND_SPEED: 'windSpeed'
+
 }
 
+_DIRECTIONS = ['N', 'NNE', 'NE', 'ENE',
+               'E', 'ESE', 'SE', 'SSE',
+               'S', 'SSW', 'SW', 'WSW',
+               'W', 'WNW', 'NW', 'NNW']
+
+WIND = {name: idx * 360 / 16 for idx, name in enumerate(_DIRECTIONS)}
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME): cv.string,
     vol.Optional(CONF_LATITUDE): cv.latitude,
     vol.Optional(CONF_LONGITUDE): cv.longitude,
-    vol.Optional(CONF_STATION, default=''): cv.string
+    vol.Optional(CONF_STATION, default=''): cv.string,
+    vol.Required(CONF_USERID): cv.string
 })
+
+def parse_icon(icon):
+    """Parses icon html to weather codes"""
+    icon_list = icon.split('/')
+    time = icon_list[5]
+    weather = [i.split('?')[0] for i in icon_list[6:]]
+    code = [w.split(',')[0] for w in weather]
+    chance = [int(w.split(',')[1]) if len(w.split(',')) == 2 else 0 for w in\
+ weather]
+    return time, tuple(zip(code, chance))
 
 def convert_condition(code):
     """Converts NWS codes to HA condition"""
+
     time = code[0]
     weather = code[1]
     conditions = [w[0] for w in weather]
     # Precipitation probability not currently used.
-    #prec = [w[1] for w in weather]
+    prec = [w[1] for w in weather]
 
     # Choose condition with highest priority.
-    cond = next((k for k, v in CONDITION_CLASSES.items()
-                 if any(c in v for c in conditions)), conditions[0])
+    cond = next((key for key, value in CONDITION_CLASSES.items()
+                 if any(condition in value for condition in conditions))
+                , conditions[0])
 
     if cond == 'clear':
         if time == 'day':
@@ -84,31 +108,34 @@ def convert_condition(code):
         if time == 'night':
             return 'clear-night'
 
-    return cond
+    return cond, max(prec)
 
 async def async_setup_platform(hass, config, async_add_entities,
                                discovery_info=None):
     """Set up the nws platform."""
     latitude = config.get(CONF_LATITUDE, hass.config.latitude)
     longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
-    stations = config.get(CONF_STATION).split(',')
-    if stations[0] == '':
-        stations = []
-
+    station = config.get(CONF_STATION).split(',')
+    userid = config.get(CONF_USERID)
+    
     if None in (latitude, longitude):
-        _LOGGER.error("Latitude or longitude not set in Home Assistant config")
+        _LOGGER.error("Latitude/longitude not set in Home Assistant config")
         return
 
-    from pynws import NWS
+    from pynws import Nws
 
     websession = async_get_clientsession(hass)
-    with async_timeout.timeout(10, loop=hass.loop):
-        nws = NWS((float(latitude), float(longitude)),
-                  websession, stations=stations)
-        await nws.get_station()
-    _LOGGER.info("Initializing for coordinates %s, %s -> station %s",
-                 latitude, longitude,
-                 nws.stations)
+    nws = Nws(websession, latlon=(float(latitude), float(longitude)))
+
+    if station == '':
+        with async_timeout.timeout(10, loop=hass.loop):
+            stations = await nws.station()
+        nws.station = stations[0]
+        _LOGGER.debug("Initialized for coordinates %s, %s -> station %s",
+                      latitude, longitude, station[0])
+    else:
+        nws.station = station[0]
+        _LOGGER.debug("Initialized station %s", station[0])
 
     async_add_entities([NWSWeather(nws, config)], True)
 
@@ -121,20 +148,22 @@ class NWSWeather(WeatherEntity):
         self._nws = nws
         self._station_name = config.get(CONF_NAME, self._nws.station)
         self._description = None
-
+        self._observation = None
+        self._forecast = None
+        
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
         """Update Condition."""
         with async_timeout.timeout(10, loop=self.hass.loop):
-            _LOGGER.info("Updating stations %s",
-                         self._nws.stations)
-            await self._nws.observation_update()
-            _LOGGER.info("Updating forecast")
-            await self._nws.forecast_update()
+            _LOGGER.debug("Updating station observations %s",
+                          self._nws.station)
+            self._observation = await self._nws.observations()
+            _LOGGER.debug("Updating forecast")
+            self._forecast = await self._nws.forecast()
 
-        _LOGGER.info("%s",
-                     self._nws.weather_code_all)
-
+        _LOGGER.debug("Observations: %s", self._observation)
+        _LOGGER.debug("Forecasts: %s", self._forecast)
+        
     @property
     def attribution(self):
         """Return the attribution."""
@@ -148,32 +177,35 @@ class NWSWeather(WeatherEntity):
     @property
     def temperature(self):
         """Return the current temperature."""
-        return self._nws.temperature
+        return self._observation[0]['temperature']['value']
 
     @property
     def pressure(self):
         """Return the current pressure."""
-        if self._nws.pressure is not None:
-            return round(self._nws.pressure / 3386.39, 2)
+        pressure_pa = self._observation[0]['seaLevelPressure']['value']
+        #convert Pa to in Hg
+        if pressure_pa is not None:
+            return round(pressure_pa / 3386.39, 2)
         return None
 
     @property
     def humidity(self):
         """Return the name of the sensor."""
-        return self._nws.relative_humidity
+        return self._observation[0]['relativeHumidity']['value']
 
     @property
     def wind_speed(self):
         """Return the current windspeed."""
         # covert to mi/hr from m/s
-        if self._nws.wind_speed is not None:
-            return round(self._nws.wind_speed * 2.237)
+        wind_m_s = self._observation[0]['windSpeed']['value']
+        if wind_m_s is not None:
+            return round(wind_m_s * 2.237)
         return None
 
     @property
     def wind_bearing(self):
         """Return the current wind bearing (degrees)."""
-        return self._nws.wind_direction
+        return self._observation[0]['windDirection']['value']
 
     @property
     def temperature_unit(self):
@@ -190,24 +222,38 @@ class NWSWeather(WeatherEntity):
 
     @property
     def condition(self):
-        return convert_condition(self._nws.weather_code)
-
+        code = parse_icon(self._observation[0]['icon'])
+        cond, _ = convert_condition(code)
+        return cond
+    
     @property
     def visibility(self):
         #convert to mi from m
-        if self._nws.visibility is not None:
-            return round(self._nws.visibility / 1609.34)
+        vis = self._observation[0]['visibility']['value']
+        if vis is not None:
+            return convert_distance(vis, LENGTH_METERS, LENGTH_MILES)
         return None
 
     @property
     def forecast(self):
         forecast = []
-        for forecast_entry in self._nws.forecast:
+        for forecast_entry in self._forecast:
             data = {attr: forecast_entry[name]
                     for attr, name in FORECAST_CLASSES.items()}
-            data[ATTR_FORECAST_CONDITION] = convert_condition(forecast_entry['weather_code'])
 
+            tempF = forecast_entry['temperature']
+            data[ATTR_FORECAST_TEMP] = convert_temperature(tempF,
+                                                           TEMP_FAHRENHEIT,
+                                                           TEMP_CELSIUS)
+
+            code = parse_icon(forecast_entry['icon'])
+            cond, precip = convert_condition(code)
+            data[ATTR_FORECAST_CONDITION] = cond
+            data[ATTR_FORECAST_PRECIP_PROB] = precip
+            data[ATTR_FORECAST_WIND_BEARING] = \
+                                    WIND[forecast_entry['windDirection']]
+
+            data[ATTR_FORECAST_WIND_SPEED] = ' '.join(forecast_entry['windSpeed'].split(' ')[:-1])
             forecast.append(data)
 
-        _LOGGER.info('%s', forecast[0])
         return forecast

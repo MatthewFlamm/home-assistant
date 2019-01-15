@@ -30,8 +30,6 @@ _LOGGER = logging.getLogger(__name__)
 
 ATTRIBUTION = 'National Weather Service/NOAA'
 
-ATTR_WEATHER_DESCRIPTION = 'https://www.weather.gov'
-
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=30)
 
 CONF_STATION = 'station'
@@ -63,12 +61,14 @@ FORECAST_CLASSES = {
 
 }
 
-_DIRECTIONS = ['N', 'NNE', 'NE', 'ENE',
-               'E', 'ESE', 'SE', 'SSE',
-               'S', 'SSW', 'SW', 'WSW',
-               'W', 'WNW', 'NW', 'NNW']
+WEATHER_DESCRIPTION = 'https://www.weather.gov'
 
-WIND = {name: idx * 360 / 16 for idx, name in enumerate(_DIRECTIONS)}
+WIND_DIRECTIONS = ['N', 'NNE', 'NE', 'ENE',
+                   'E', 'ESE', 'SE', 'SSE',
+                   'S', 'SSW', 'SW', 'WSW',
+                   'W', 'WNW', 'NW', 'NNW']
+
+WIND = {name: idx * 360 / 16 for idx, name in enumerate(WIND_DIRECTIONS)}
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME): cv.string,
@@ -79,7 +79,16 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 def parse_icon(icon):
-    """Parses icon html to weather codes"""
+    """
+    Parses icon url to NWS weather codes
+
+    Example:
+    https://api.weather.gov/icons/land/day/skc/tsra,40/ovc?size=medium
+    
+    Example return:
+    ('day', (('skc', 0), ('tsra', 40),))
+    """
+
     icon_list = icon.split('/')
     time = icon_list[5]
     weather = [i.split('?')[0] for i in icon_list[6:]]
@@ -89,33 +98,36 @@ def parse_icon(icon):
     return time, tuple(zip(code, chance))
 
 def convert_condition(code):
-    """Converts NWS codes to HA condition"""
+    """
+    Converts NWS codes to HA condition
+
+    Chooses first condition in CONDITION_CLASSES that exists in weather code
+    """
 
     time = code[0]
     weather = code[1]
     conditions = [w[0] for w in weather]
-    # Precipitation probability not currently used.
-    prec = [w[1] for w in weather]
+    prec_prob = [w[1] for w in weather]
 
     # Choose condition with highest priority.
     cond = next((key for key, value in CONDITION_CLASSES.items()
                  if any(condition in value for condition in conditions))
                 , conditions[0])
-
+    
     if cond == 'clear':
         if time == 'day':
             return 'sunny'
         if time == 'night':
             return 'clear-night'
 
-    return cond, max(prec)
+    return cond, max(prec_prob)
 
 async def async_setup_platform(hass, config, async_add_entities,
                                discovery_info=None):
     """Set up the nws platform."""
     latitude = config.get(CONF_LATITUDE, hass.config.latitude)
     longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
-    station = config.get(CONF_STATION).split(',')
+    station = config.get(CONF_STATION)
     userid = config.get(CONF_USERID)
     
     if None in (latitude, longitude):
@@ -127,14 +139,15 @@ async def async_setup_platform(hass, config, async_add_entities,
     websession = async_get_clientsession(hass)
     nws = Nws(websession, latlon=(float(latitude), float(longitude)))
 
+    _LOGGER.debug("Setting up station: %s", station)
     if station == '':
         with async_timeout.timeout(10, loop=hass.loop):
-            stations = await nws.station()
+            stations = await nws.stations()
         nws.station = stations[0]
         _LOGGER.debug("Initialized for coordinates %s, %s -> station %s",
-                      latitude, longitude, station[0])
+                      latitude, longitude, stations[0])
     else:
-        nws.station = station[0]
+        nws.station = station
         _LOGGER.debug("Initialized station %s", station[0])
 
     async_add_entities([NWSWeather(nws, config)], True)
@@ -147,7 +160,7 @@ class NWSWeather(WeatherEntity):
         """Initialise the platform with a data instance and station name."""
         self._nws = nws
         self._station_name = config.get(CONF_NAME, self._nws.station)
-        self._description = None
+        self._description = WEATHER_DESCRIPTION
         self._observation = None
         self._forecast = None
         
@@ -173,12 +186,14 @@ class NWSWeather(WeatherEntity):
     def name(self):
         """Return the name of the station."""
         return self._station_name
-
+    
     @property
     def temperature(self):
         """Return the current temperature."""
-        return self._observation[0]['temperature']['value']
-
+        temp_f = self._observation[0]['temperature']['value']
+        if temp_f is not None:
+            return convert_temperature(temp_f, TEMP_CELSIUS, TEMP_FAHRENHEIT)
+        return NONE
     @property
     def pressure(self):
         """Return the current pressure."""
@@ -210,7 +225,7 @@ class NWSWeather(WeatherEntity):
     @property
     def temperature_unit(self):
         """Return the unit of measurement."""
-        return TEMP_CELSIUS
+        return TEMP_FAHRENHEIT
 
     @property
     def device_state_attributes(self):
@@ -241,10 +256,7 @@ class NWSWeather(WeatherEntity):
             data = {attr: forecast_entry[name]
                     for attr, name in FORECAST_CLASSES.items()}
 
-            tempF = forecast_entry['temperature']
-            data[ATTR_FORECAST_TEMP] = convert_temperature(tempF,
-                                                           TEMP_FAHRENHEIT,
-                                                           TEMP_CELSIUS)
+            data[ATTR_FORECAST_TEMP] = forecast_entry['temperature']
 
             code = parse_icon(forecast_entry['icon'])
             cond, precip = convert_condition(code)
@@ -257,3 +269,5 @@ class NWSWeather(WeatherEntity):
             forecast.append(data)
 
         return forecast
+
+    

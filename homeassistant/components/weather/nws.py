@@ -96,15 +96,13 @@ def parse_icon(icon):
  weather]
     return time, tuple(zip(code, chance))
 
-def convert_condition(code):
+def convert_condition(time, weather):
     """
     Converts NWS codes to HA condition
 
     Chooses first condition in CONDITION_CLASSES that exists in weather code
     """
 
-    time = code[0]
-    weather = code[1]
     conditions = [w[0] for w in weather]
     prec_prob = [w[1] for w in weather]
 
@@ -115,9 +113,9 @@ def convert_condition(code):
     
     if cond == 'clear':
         if time == 'day':
-            return 'sunny'
+            return 'sunny', max(prec_prob)
         if time == 'night':
-            return 'clear-night'
+            return 'clear-night', max(prec_prob)
     return cond, max(prec_prob)
 
 async def async_setup_platform(hass, config, async_add_entities,
@@ -228,8 +226,8 @@ class NWSWeather(WeatherEntity):
 
     @property
     def condition(self):
-        code = parse_icon(self._observation[0]['icon'])
-        cond, precip_prob = convert_condition(code)
+        time, weather = parse_icon(self._observation[0]['icon'])
+        cond, precip_prob = convert_condition(time, weather)
         return cond
     
     @property
@@ -248,11 +246,12 @@ class NWSWeather(WeatherEntity):
                     for attr, name in FORECAST_CLASSES.items()}
 
             data[ATTR_FORECAST_TEMP] = forecast_entry['temperature']
-
-            code = parse_icon(forecast_entry['icon'])
-            cond, precip = convert_condition(code)
+            
+            time, weather = parse_icon(forecast_entry['icon'])
+            cond, precip = convert_condition(time, weather)
             data[ATTR_FORECAST_CONDITION] = cond
             data[ATTR_FORECAST_PRECIP_PROB] = precip
+
             data[ATTR_FORECAST_WIND_BEARING] = \
                                     WIND[forecast_entry['windDirection']]
 

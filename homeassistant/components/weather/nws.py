@@ -4,9 +4,9 @@ Support for NWS weather service.
 For more details about this platform, please refer to the documentation at
 https://home-assistant.io/components/weather.nws/
 """
-import logging
 from collections import OrderedDict
 from datetime import timedelta
+import logging
 
 import async_timeout
 import voluptuous as vol
@@ -24,6 +24,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.util import Throttle
 from homeassistant.util.distance import convert as convert_distance
 from homeassistant.util.temperature import convert as convert_temperature
+
 REQUIREMENTS = ['pynws']
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,13 +56,11 @@ CONDITION_CLASSES = OrderedDict([
 ])
 
 FORECAST_CLASSES = {
-
+    
     ATTR_FORECAST_TIME: 'startTime',
     ATTR_FORECAST_WIND_SPEED: 'windSpeed'
 
 }
-
-WEATHER_DESCRIPTION = 'https://www.weather.gov'
 
 WIND_DIRECTIONS = ['N', 'NNE', 'NE', 'ENE',
                    'E', 'ESE', 'SE', 'SSE',
@@ -119,7 +118,6 @@ def convert_condition(code):
             return 'sunny'
         if time == 'night':
             return 'clear-night'
-
     return cond, max(prec_prob)
 
 async def async_setup_platform(hass, config, async_add_entities,
@@ -160,10 +158,10 @@ class NWSWeather(WeatherEntity):
         """Initialise the platform with a data instance and station name."""
         self._nws = nws
         self._station_name = config.get(CONF_NAME, self._nws.station)
-        self._description = WEATHER_DESCRIPTION
         self._observation = None
         self._forecast = None
-        
+        self._description=None
+
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
         """Update Condition."""
@@ -193,7 +191,8 @@ class NWSWeather(WeatherEntity):
         temp_f = self._observation[0]['temperature']['value']
         if temp_f is not None:
             return convert_temperature(temp_f, TEMP_CELSIUS, TEMP_FAHRENHEIT)
-        return NONE
+        return None
+    
     @property
     def pressure(self):
         """Return the current pressure."""
@@ -228,17 +227,9 @@ class NWSWeather(WeatherEntity):
         return TEMP_FAHRENHEIT
 
     @property
-    def device_state_attributes(self):
-        """Return the state attributes."""
-        data = dict()
-        if self._description:
-            data[ATTR_WEATHER_DESCRIPTION] = self._description
-        return data
-
-    @property
     def condition(self):
         code = parse_icon(self._observation[0]['icon'])
-        cond, _ = convert_condition(code)
+        cond, precip_prob = convert_condition(code)
         return cond
     
     @property
@@ -271,3 +262,12 @@ class NWSWeather(WeatherEntity):
         return forecast
 
     
+    @property
+    def device_state_attributes(self):
+        """Return the state attributes."""
+        data = dict()
+
+        if self._description:
+            data[ATTR_WEATHER_DESCRIPTION] = self._description
+
+        return data

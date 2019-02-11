@@ -54,7 +54,7 @@ FORE = [{'endTime': '2018-12-21T18:00:00-05:00',
          'number': 1,
          'icon': 'https://api.weather.gov/icons/land/day/skc/tsra,40/ovc?size=medium'}]
 
-STN = ['STNA']
+STN = 'STNA'
 
 class MockNws():
     """Mock Station from pyipma."""
@@ -75,7 +75,7 @@ class MockNws():
 
     async def stations(self):
         """Mock stations."""
-        return STN
+        return [STN]
     
     @property
     def local(self):
@@ -99,7 +99,7 @@ class TestNWS(unittest.TestCase):
 
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
-    def test_setup(self, mock_pynws):
+    def test_setup_w_name(self, mock_pynws):
         """Test for successfully setting up the IPMA platform."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
@@ -131,18 +131,19 @@ class TestNWS(unittest.TestCase):
         assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180
         assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == '8 to 10'
 
+    @MockDependency("pynws")
+    @patch("pynws.Nws", new=MockNws)
     def test_setup_w_station(self, mock_pynws):
         """Test for successfully setting up the IPMA platform."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
-                'name': 'HomeWeather',
                 'platform': 'nws',
                 'station': 'STNB',
                 'userid': 'test@test.com',
             }
         })
 
-        state = self.hass.states.get('weather.homeweather')
+        state = self.hass.states.get('weather.stnb')
         assert state.state == 'cloudy'
 
         data = state.attributes
@@ -154,7 +155,40 @@ class TestNWS(unittest.TestCase):
         assert data.get(ATTR_WEATHER_WIND_SPEED) == round(10 * 2.237)
         assert data.get(ATTR_WEATHER_WIND_BEARING) == 180
         assert data.get(ATTR_WEATHER_VISIBILITY) == convert_distance(10000, LENGTH_METERS, LENGTH_MILES)
-        assert state.attributes.get('friendly_name') == 'HomeWeather'
+        assert state.attributes.get('friendly_name') == 'STNB'
+        
+        forecast = data.get(ATTR_FORECAST)
+        assert forecast[0].get(ATTR_FORECAST_CONDITION) == 'lightning-rainy'
+        assert forecast[0].get(ATTR_FORECAST_PRECIP_PROB) == 40
+        assert forecast[0].get(ATTR_FORECAST_TEMP) == 41
+        assert forecast[0].get(ATTR_FORECAST_TIME) == '2018-12-21T15:00:00-05:00'
+        assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180
+        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == '8 to 10'
+
+    @MockDependency("pynws")
+    @patch("pynws.Nws", new=MockNws)
+    def test_setup_get_stn(self, mock_pynws):
+        """Test for successfully setting up the IPMA platform."""
+        assert setup_component(self.hass, weather.DOMAIN, {
+            'weather': {
+                'platform': 'nws',
+                'userid': 'test@test.com',
+            }
+        })
+
+        state = self.hass.states.get('weather.' + STN)
+        assert state.state == 'cloudy'
+
+        data = state.attributes
+        temp_f = convert_temperature(7, TEMP_CELSIUS, TEMP_FAHRENHEIT)
+        assert data.get(ATTR_WEATHER_TEMPERATURE) == \
+            display_temp(self.hass, temp_f, TEMP_FAHRENHEIT, PRECISION_WHOLE)
+        assert data.get(ATTR_WEATHER_HUMIDITY) == 10
+        assert data.get(ATTR_WEATHER_PRESSURE) == round(30000 / 3386.39, 2)
+        assert data.get(ATTR_WEATHER_WIND_SPEED) == round(10 * 2.237)
+        assert data.get(ATTR_WEATHER_WIND_BEARING) == 180
+        assert data.get(ATTR_WEATHER_VISIBILITY) == convert_distance(10000, LENGTH_METERS, LENGTH_MILES)
+        assert state.attributes.get('friendly_name') == STN
         
         forecast = data.get(ATTR_FORECAST)
         assert forecast[0].get(ATTR_FORECAST_CONDITION) == 'lightning-rainy'

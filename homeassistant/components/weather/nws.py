@@ -39,6 +39,7 @@ CONF_USERID = 'userid'
 ATTR_FORECAST_PRECIP_PROB = 'precipitation_probability'
 
 # Ordered so that a single condition can be chosen from multiple weather codes.
+# Known NWS conditions that do not map: cold
 CONDITION_CLASSES = OrderedDict([
     ('snowy', ['snow', 'snow_sleet', 'sleet', 'blizzard']),
     ('snowy-rainy', ['rain_snow', 'rain_sleet', 'fzra', 'rain_fzra', 'snow_fzra']),

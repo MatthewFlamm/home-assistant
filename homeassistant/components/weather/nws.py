@@ -37,7 +37,7 @@ CONF_STATION = 'station'
 CONF_USERID = 'userid'
 
 ATTR_FORECAST_PRECIP_PROB = 'precipitation_probability'
-
+ATTR_FORECAST_DAYTIME = 'daytime'
 # Ordered so that a single condition can be chosen from multiple weather codes.
 # Known NWS conditions that do not map: cold
 CONDITION_CLASSES = OrderedDict([
@@ -251,12 +251,16 @@ class NWSWeather(WeatherEntity):
             time, weather = parse_icon(forecast_entry['icon'])
             cond, precip = convert_condition(time, weather)
             data[ATTR_FORECAST_CONDITION] = cond
-            data[ATTR_FORECAST_PRECIP_PROB] = precip
-
+            if precip>0:
+                data[ATTR_FORECAST_PRECIP_PROB] = precip
             data[ATTR_FORECAST_WIND_BEARING] = \
-                                    WIND[forecast_entry['windDirection']]
+                    WIND[forecast_entry['windDirection']]
 
             data[ATTR_FORECAST_WIND_SPEED] = ' '.join(forecast_entry['windSpeed'].split(' ')[:-1])
+            if not forecast_entry['isDaytime']:
+                data[ATTR_FORECAST_DAYTIME] = 'Night'
+            else:
+                data[ATTR_FORECAST_DAYTIME] = 'Day'
             forecast.append(data)
 
         return forecast

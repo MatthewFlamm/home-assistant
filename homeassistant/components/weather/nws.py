@@ -29,13 +29,14 @@ REQUIREMENTS = ['pynws']
 
 _LOGGER = logging.getLogger(__name__)
 
-ATTRIBUTION = 'National Weather Service/NOAA'
+ATTRIBUTION = 'Data from National Weather Service/NOAA'
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=30)
 
 CONF_STATION = 'station'
 CONF_USERID = 'userid'
 
+ATTR_FORECAST_DETAIL_DESCRIPTION = 'detailed_description'
 ATTR_FORECAST_PRECIP_PROB = 'precipitation_probability'
 ATTR_FORECAST_DAYTIME = 'daytime'
 # Ordered so that a single condition can be chosen from multiple weather codes.
@@ -57,10 +58,8 @@ CONDITION_CLASSES = OrderedDict([
 ])
 
 FORECAST_CLASSES = {
-    
     ATTR_FORECAST_TIME: 'startTime',
     ATTR_FORECAST_WIND_SPEED: 'windSpeed'
-
 }
 
 WIND_DIRECTIONS = ['N', 'NNE', 'NE', 'ENE',
@@ -236,7 +235,7 @@ class NWSWeather(WeatherEntity):
         #convert to mi from m
         vis = self._observation[0]['visibility']['value']
         if vis is not None:
-            return convert_distance(vis, LENGTH_METERS, LENGTH_MILES)
+            return round(convert_distance(vis, LENGTH_METERS, LENGTH_MILES), 1)
         return None
 
     @property
@@ -261,8 +260,8 @@ class NWSWeather(WeatherEntity):
                 data[ATTR_FORECAST_DAYTIME] = 'Night'
             else:
                 data[ATTR_FORECAST_DAYTIME] = 'Day'
+            data[ATTR_FORECAST_DETAIL_DESCRIPTION] = forecast_entry['detailedForecast']
             forecast.append(data)
-
         return forecast
 
     

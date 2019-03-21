@@ -23,6 +23,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import Throttle
 from homeassistant.util.distance import convert as convert_distance
+# add pressure util
 from homeassistant.util.temperature import convert as convert_temperature
 
 REQUIREMENTS = ['pynws']
@@ -39,6 +40,7 @@ CONF_USERID = 'userid'
 ATTR_FORECAST_DETAIL_DESCRIPTION = 'detailed_description'
 ATTR_FORECAST_PRECIP_PROB = 'precipitation_probability'
 ATTR_FORECAST_DAYTIME = 'daytime'
+
 # Ordered so that a single condition can be chosen from multiple weather codes.
 # Known NWS conditions that do not map: cold
 CONDITION_CLASSES = OrderedDict([
@@ -58,6 +60,9 @@ CONDITION_CLASSES = OrderedDict([
 ])
 
 FORECAST_CLASSES = {
+    ATTR_FORECAST_DAYTIME: 'isDaytime',
+    ATTR_FORECAST_DETAIL_DESCRIPTION: 'detailedForecast',
+    ATTR_FORECAST_TEMP: 'temperature',
     ATTR_FORECAST_TIME: 'startTime',
     ATTR_FORECAST_WIND_SPEED: 'windSpeed'
 }
@@ -244,23 +249,19 @@ class NWSWeather(WeatherEntity):
         for forecast_entry in self._forecast:
             data = {attr: forecast_entry[name]
                     for attr, name in FORECAST_CLASSES.items()}
-
-            data[ATTR_FORECAST_TEMP] = forecast_entry['temperature']
             
             time, weather = parse_icon(forecast_entry['icon'])
             cond, precip = convert_condition(time, weather)
             data[ATTR_FORECAST_CONDITION] = cond
-            if precip>0:
+            if precip > 0:
                 data[ATTR_FORECAST_PRECIP_PROB] = precip
+            else:
+                data[ATTR_FORECAST_PRECIP_PROB] = None
             data[ATTR_FORECAST_WIND_BEARING] = \
                     WIND[forecast_entry['windDirection']]
 
             data[ATTR_FORECAST_WIND_SPEED] = ' '.join(forecast_entry['windSpeed'].split(' ')[:-1])
-            if not forecast_entry['isDaytime']:
-                data[ATTR_FORECAST_DAYTIME] = 'Night'
-            else:
-                data[ATTR_FORECAST_DAYTIME] = 'Day'
-            data[ATTR_FORECAST_DETAIL_DESCRIPTION] = forecast_entry['detailedForecast']
+
             forecast.append(data)
         return forecast
 

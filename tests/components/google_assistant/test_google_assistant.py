@@ -8,7 +8,8 @@ import pytest
 
 from homeassistant import core, const, setup
 from homeassistant.components import (
-    fan, cover, light, switch, climate, lock, async_setup, media_player)
+    fan, cover, light, switch, lock, async_setup, media_player)
+from homeassistant.components.climate import const as climate
 from homeassistant.const import CLOUD_NEVER_EXPOSED_ENTITIES
 from homeassistant.components import google_assistant as ga
 
@@ -105,6 +106,8 @@ def hass_fixture(loop, hass):
         }))
 
     return hass
+
+# pylint: disable=redefined-outer-name
 
 
 @asyncio.coroutine
@@ -204,7 +207,6 @@ def test_query_climate_request(hass_fixture, assistant_client, auth_header):
     devices = body['payload']['devices']
     assert len(devices) == 3
     assert devices['climate.heatpump'] == {
-        'on': True,
         'online': True,
         'thermostatTemperatureSetpoint': 20.0,
         'thermostatTemperatureAmbient': 25.0,
@@ -261,7 +263,6 @@ def test_query_climate_request_f(hass_fixture, assistant_client, auth_header):
     devices = body['payload']['devices']
     assert len(devices) == 3
     assert devices['climate.heatpump'] == {
-        'on': True,
         'online': True,
         'thermostatTemperatureSetpoint': -6.7,
         'thermostatTemperatureAmbient': -3.9,

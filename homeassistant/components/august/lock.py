@@ -1,15 +1,11 @@
-"""
-Support for August lock.
-
-For more details about this platform, please refer to the documentation at
-https://home-assistant.io/components/lock.august/
-"""
-import logging
+"""Support for August lock."""
 from datetime import timedelta
+import logging
 
-from homeassistant.components.august import DATA_AUGUST
 from homeassistant.components.lock import LockDevice
 from homeassistant.const import ATTR_BATTERY_LEVEL
+
+from . import DATA_AUGUST
 
 _LOGGER = logging.getLogger(__name__)
 

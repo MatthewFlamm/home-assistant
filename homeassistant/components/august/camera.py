@@ -1,15 +1,11 @@
-"""
-Support for August camera.
-
-For more details about this platform, please refer to the documentation at
-https://home-assistant.io/components/camera.august/
-"""
+"""Support for August camera."""
 from datetime import timedelta
 
 import requests
 
-from homeassistant.components.august import DATA_AUGUST, DEFAULT_TIMEOUT
 from homeassistant.components.camera import Camera
+
+from . import DATA_AUGUST, DEFAULT_TIMEOUT
 
 DEPENDENCIES = ['august']
 

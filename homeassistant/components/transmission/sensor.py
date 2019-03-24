@@ -1,19 +1,13 @@
-"""
-Support for monitoring the Transmission BitTorrent client API.
-
-For more details about this platform, please refer to the documentation at
-https://home-assistant.io/components/sensor.transmission/
-"""
+"""Support for monitoring the Transmission BitTorrent client API."""
 from datetime import timedelta
-
 import logging
 
-from homeassistant.components.transmission import (
-    DATA_TRANSMISSION, SENSOR_TYPES, DATA_UPDATED)
 from homeassistant.const import STATE_IDLE
 from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
+
+from . import DATA_TRANSMISSION, DATA_UPDATED, SENSOR_TYPES
 
 DEPENDENCIES = ['transmission']
 
@@ -25,10 +19,7 @@ SCAN_INTERVAL = timedelta(seconds=120)
 
 
 async def async_setup_platform(
-        hass,
-        config,
-        async_add_entities,
-        discovery_info=None):
+        hass, config, async_add_entities, discovery_info=None):
     """Set up the Transmission sensors."""
     if discovery_info is None:
         return
@@ -40,11 +31,8 @@ async def async_setup_platform(
     dev = []
     for sensor_type in monitored_variables:
         dev.append(TransmissionSensor(
-            sensor_type,
-            transmission_api,
-            name,
-            SENSOR_TYPES[sensor_type][0],
-            SENSOR_TYPES[sensor_type][1]))
+            sensor_type, transmission_api, name,
+            SENSOR_TYPES[sensor_type][0], SENSOR_TYPES[sensor_type][1]))
 
     async_add_entities(dev, True)
 
@@ -53,11 +41,7 @@ class TransmissionSensor(Entity):
     """Representation of a Transmission sensor."""
 
     def __init__(
-            self,
-            sensor_type,
-            transmission_api,
-            client_name,
-            sensor_name,
+            self, sensor_type, transmission_api, client_name, sensor_name,
             unit_of_measurement):
         """Initialize the sensor."""
         self._name = sensor_name
@@ -96,8 +80,7 @@ class TransmissionSensor(Entity):
     async def async_added_to_hass(self):
         """Handle entity which will be added."""
         async_dispatcher_connect(
-            self.hass, DATA_UPDATED, self._schedule_immediate_update
-        )
+            self.hass, DATA_UPDATED, self._schedule_immediate_update)
 
     @callback
     def _schedule_immediate_update(self):

@@ -1,65 +1,61 @@
-"""
-Support for Modbus switches.
-
-For more details about this platform, please refer to the documentation at
-https://home-assistant.io/components/switch.modbus/
-"""
+"""Support for Modbus switches."""
 import logging
+
 import voluptuous as vol
 
-from homeassistant.components.modbus import (
-    CONF_HUB, DEFAULT_HUB, DOMAIN as MODBUS_DOMAIN)
+from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import (
-    CONF_NAME, CONF_SLAVE, CONF_COMMAND_ON, CONF_COMMAND_OFF, STATE_ON)
+    CONF_COMMAND_OFF, CONF_COMMAND_ON, CONF_NAME, CONF_SLAVE, STATE_ON)
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity import ToggleEntity
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers import config_validation as cv
-from homeassistant.components.sensor import PLATFORM_SCHEMA
+
+from . import CONF_HUB, DEFAULT_HUB, DOMAIN as MODBUS_DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-DEPENDENCIES = ['modbus']
 
-CONF_COIL = "coil"
-CONF_COILS = "coils"
-CONF_REGISTER = "register"
-CONF_REGISTERS = "registers"
-CONF_VERIFY_STATE = "verify_state"
-CONF_VERIFY_REGISTER = "verify_register"
-CONF_REGISTER_TYPE = "register_type"
-CONF_STATE_ON = "state_on"
-CONF_STATE_OFF = "state_off"
+CONF_COIL = 'coil'
+CONF_COILS = 'coils'
+CONF_REGISTER = 'register'
+CONF_REGISTER_TYPE = 'register_type'
+CONF_REGISTERS = 'registers'
+CONF_STATE_OFF = 'state_off'
+CONF_STATE_ON = 'state_on'
+CONF_VERIFY_REGISTER = 'verify_register'
+CONF_VERIFY_STATE = 'verify_state'
+
+DEPENDENCIES = ['modbus']
 
 REGISTER_TYPE_HOLDING = 'holding'
 REGISTER_TYPE_INPUT = 'input'
 
 REGISTERS_SCHEMA = vol.Schema({
-    vol.Optional(CONF_HUB, default=DEFAULT_HUB): cv.string,
-    vol.Required(CONF_NAME): cv.string,
-    vol.Optional(CONF_SLAVE): cv.positive_int,
-    vol.Required(CONF_REGISTER): cv.positive_int,
-    vol.Required(CONF_COMMAND_ON): cv.positive_int,
     vol.Required(CONF_COMMAND_OFF): cv.positive_int,
-    vol.Optional(CONF_VERIFY_STATE, default=True): cv.boolean,
-    vol.Optional(CONF_VERIFY_REGISTER):
-        cv.positive_int,
+    vol.Required(CONF_COMMAND_ON): cv.positive_int,
+    vol.Required(CONF_NAME): cv.string,
+    vol.Required(CONF_REGISTER): cv.positive_int,
+    vol.Optional(CONF_HUB, default=DEFAULT_HUB): cv.string,
     vol.Optional(CONF_REGISTER_TYPE, default=REGISTER_TYPE_HOLDING):
         vol.In([REGISTER_TYPE_HOLDING, REGISTER_TYPE_INPUT]),
-    vol.Optional(CONF_STATE_ON): cv.positive_int,
+    vol.Optional(CONF_SLAVE): cv.positive_int,
     vol.Optional(CONF_STATE_OFF): cv.positive_int,
+    vol.Optional(CONF_STATE_ON): cv.positive_int,
+    vol.Optional(CONF_VERIFY_REGISTER): cv.positive_int,
+    vol.Optional(CONF_VERIFY_STATE, default=True): cv.boolean,
 })
 
 COILS_SCHEMA = vol.Schema({
-    vol.Optional(CONF_HUB, default=DEFAULT_HUB): cv.string,
     vol.Required(CONF_COIL): cv.positive_int,
     vol.Required(CONF_NAME): cv.string,
     vol.Required(CONF_SLAVE): cv.positive_int,
+    vol.Optional(CONF_HUB, default=DEFAULT_HUB): cv.string,
 })
 
 PLATFORM_SCHEMA = vol.All(
     cv.has_at_least_one_key(CONF_COILS, CONF_REGISTERS),
     PLATFORM_SCHEMA.extend({
         vol.Optional(CONF_COILS): [COILS_SCHEMA],
-        vol.Optional(CONF_REGISTERS): [REGISTERS_SCHEMA]
+        vol.Optional(CONF_REGISTERS): [REGISTERS_SCHEMA],
     }))
 
 
@@ -71,9 +67,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             hub_name = coil.get(CONF_HUB)
             hub = hass.data[MODBUS_DOMAIN][hub_name]
             switches.append(ModbusCoilSwitch(
-                hub,
-                coil.get(CONF_NAME),
-                coil.get(CONF_SLAVE),
+                hub, coil.get(CONF_NAME), coil.get(CONF_SLAVE),
                 coil.get(CONF_COIL)))
     if CONF_REGISTERS in config:
         for register in config.get(CONF_REGISTERS):
@@ -92,6 +86,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                 register.get(CONF_REGISTER_TYPE),
                 register.get(CONF_STATE_ON),
                 register.get(CONF_STATE_OFF)))
+
     add_entities(switches)
 
 
@@ -139,18 +134,16 @@ class ModbusCoilSwitch(ToggleEntity, RestoreEntity):
         except AttributeError:
             _LOGGER.error(
                 'No response from hub %s, slave %s, coil %s',
-                self._hub.name,
-                self._slave,
-                self._coil)
+                self._hub.name, self._slave, self._coil)
 
 
 class ModbusRegisterSwitch(ModbusCoilSwitch):
     """Representation of a Modbus register switch."""
 
     # pylint: disable=super-init-not-called
-    def __init__(self, hub, name, slave, register, command_on,
-                 command_off, verify_state, verify_register,
-                 register_type, state_on, state_off):
+    def __init__(self, hub, name, slave, register, command_on, command_off,
+                 verify_state, verify_register, register_type, state_on,
+                 state_off):
         """Initialize the register switch."""
         self._hub = hub
         self._name = name
@@ -177,19 +170,14 @@ class ModbusRegisterSwitch(ModbusCoilSwitch):
 
     def turn_on(self, **kwargs):
         """Set switch on."""
-        self._hub.write_register(
-            self._slave,
-            self._register,
-            self._command_on)
+        self._hub.write_register(self._slave, self._register, self._command_on)
         if not self._verify_state:
             self._is_on = True
 
     def turn_off(self, **kwargs):
         """Set switch off."""
         self._hub.write_register(
-            self._slave,
-            self._register,
-            self._command_off)
+            self._slave, self._register, self._command_off)
         if not self._verify_state:
             self._is_on = False
 
@@ -201,23 +189,17 @@ class ModbusRegisterSwitch(ModbusCoilSwitch):
         value = 0
         if self._register_type == REGISTER_TYPE_INPUT:
             result = self._hub.read_input_registers(
-                self._slave,
-                self._register,
-                1)
+                self._slave, self._register, 1)
         else:
             result = self._hub.read_holding_registers(
-                self._slave,
-                self._register,
-                1)
+                self._slave, self._register, 1)
 
         try:
             value = int(result.registers[0])
         except AttributeError:
             _LOGGER.error(
-                'No response from hub %s, slave %s, register %s',
-                self._hub.name,
-                self._slave,
-                self._verify_register)
+                "No response from hub %s, slave %s, register %s",
+                self._hub.name, self._slave, self._verify_register)
 
         if value == self._state_on:
             self._is_on = True
@@ -225,9 +207,6 @@ class ModbusRegisterSwitch(ModbusCoilSwitch):
             self._is_on = False
         else:
             _LOGGER.error(
-                'Unexpected response from hub %s, slave %s '
-                'register %s, got 0x%2x',
-                self._hub.name,
-                self._slave,
-                self._verify_register,
-                value)
+                "Unexpected response from hub %s, slave %s "
+                "register %s, got 0x%2x",
+                self._hub.name, self._slave, self._verify_register, value)

@@ -200,6 +200,7 @@ class NWSWeather(WeatherEntity):
         #convert Pa to in Hg
         if pressure_pa is not None:
             pressure = convert_pressure(pressure_pa, PRESSURE_PA, PRESSURE_INHG)
+            return round(pressure, 2)
         return None
 
     @property

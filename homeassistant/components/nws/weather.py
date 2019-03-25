@@ -1,8 +1,5 @@
 """
 Support for NWS weather service.
-
-For more details about this platform, please refer to the documentation at
-https://home-assistant.io/components/weather.nws/
 """
 from collections import OrderedDict
 from datetime import timedelta
@@ -17,13 +14,13 @@ from homeassistant.components.weather import (
     ATTR_FORECAST_WIND_SPEED, ATTR_FORECAST_WIND_BEARING)
 from homeassistant.const import LENGTH_METERS, LENGTH_MILES
 from homeassistant.const import (CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE,
-                                 LENGTH_METERS, LENGTH_MILES, TEMP_CELSIUS,
-                                 TEMP_FAHRENHEIT)
+                                 LENGTH_METERS, LENGTH_MILES, PRESSURE_PA,
+                                 PRESSURE_INHG, TEMP_CELSIUS, TEMP_FAHRENHEIT)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import Throttle
 from homeassistant.util.distance import convert as convert_distance
-# add pressure util
+from homeassistant.util.pressure import convert as convert_pressure
 from homeassistant.util.temperature import convert as convert_temperature
 
 REQUIREMENTS = ['pynws']
@@ -191,9 +188,9 @@ class NWSWeather(WeatherEntity):
     @property
     def temperature(self):
         """Return the current temperature."""
-        temp_f = self._observation[0]['temperature']['value']
-        if temp_f is not None:
-            return convert_temperature(temp_f, TEMP_CELSIUS, TEMP_FAHRENHEIT)
+        temp_c = self._observation[0]['temperature']['value']
+        if temp_c is not None:
+            return convert_temperature(temp_c, TEMP_CELSIUS, TEMP_FAHRENHEIT)
         return None
     
     @property
@@ -202,7 +199,7 @@ class NWSWeather(WeatherEntity):
         pressure_pa = self._observation[0]['seaLevelPressure']['value']
         #convert Pa to in Hg
         if pressure_pa is not None:
-            return round(pressure_pa / 3386.39, 2)
+            pressure = convert_pressure(pressure_pa, PRESSURE_PA, PRESSURE_INHG)
         return None
 
     @property

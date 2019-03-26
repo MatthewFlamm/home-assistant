@@ -12,7 +12,6 @@ from homeassistant.components.weather import (
     WeatherEntity, PLATFORM_SCHEMA, ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_PRECIPITATION, ATTR_FORECAST_TEMP, ATTR_FORECAST_TIME,
     ATTR_FORECAST_WIND_SPEED, ATTR_FORECAST_WIND_BEARING)
-from homeassistant.const import LENGTH_METERS, LENGTH_MILES
 from homeassistant.const import (CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE,
                                  LENGTH_METERS, LENGTH_MILES, PRESSURE_PA,
                                  PRESSURE_INHG, TEMP_CELSIUS, TEMP_FAHRENHEIT)
@@ -214,7 +213,9 @@ class NWSWeather(WeatherEntity):
         # covert to mi/hr from m/s
         wind_m_s = self._observation[0]['windSpeed']['value']
         if wind_m_s is not None:
-            return round(wind_m_s * 2.237)
+            wind_mi_s = convert_distance(wind_m_s, LENGTH_METERS, LENGTH_MILES)
+            wind_mi_hr = wind_mi_s * 3600
+            return round(wind_mi_hr)
         return None
 
     @property

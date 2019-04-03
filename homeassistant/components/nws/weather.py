@@ -12,9 +12,9 @@ from homeassistant.components.weather import (
     WeatherEntity, PLATFORM_SCHEMA, ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_PRECIPITATION, ATTR_FORECAST_TEMP, ATTR_FORECAST_TIME,
     ATTR_FORECAST_WIND_SPEED, ATTR_FORECAST_WIND_BEARING)
-from homeassistant.const import (CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE,
-                                 LENGTH_METERS, LENGTH_MILES, PRESSURE_PA,
-                                 PRESSURE_INHG, TEMP_CELSIUS, TEMP_FAHRENHEIT)
+from homeassistant.const import (
+    CONF_API_KEY, CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE, LENGTH_METERS,
+    LENGTH_MILES, PRESSURE_PA, PRESSURE_INHG, TEMP_CELSIUS, TEMP_FAHRENHEIT)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import Throttle
@@ -31,7 +31,6 @@ ATTRIBUTION = 'Data from National Weather Service/NOAA'
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=30)
 
 CONF_STATION = 'station'
-CONF_USERID = 'userid'
 
 ATTR_FORECAST_DETAIL_DESCRIPTION = 'detailed_description'
 ATTR_FORECAST_PRECIP_PROB = 'precipitation_probability'
@@ -75,7 +74,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_LATITUDE): cv.latitude,
     vol.Optional(CONF_LONGITUDE): cv.longitude,
     vol.Optional(CONF_STATION, default=''): cv.string,
-    vol.Required(CONF_USERID): cv.string
+    vol.Required(CONF_API_KEY): cv.string
 })
 
 def parse_icon(icon):
@@ -125,16 +124,17 @@ async def async_setup_platform(hass, config, async_add_entities,
     latitude = config.get(CONF_LATITUDE, hass.config.latitude)
     longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
     station = config.get(CONF_STATION)
-    userid = config.get(CONF_USERID)
+    api_key = config.get(CONF_API_KEY)
     
     if None in (latitude, longitude):
         _LOGGER.error("Latitude/longitude not set in Home Assistant config")
         return
 
     from pynws import Nws
-
+    # TODO: use api_key
+    # TODO: pass unit system
     websession = async_get_clientsession(hass)
-    nws = Nws(websession, latlon=(float(latitude), float(longitude)))
+    nws = Nws(websession, latlon=(float(latitude), float(longitude)), userid=api_key)
 
     _LOGGER.debug("Setting up station: %s", station)
     if station == '':

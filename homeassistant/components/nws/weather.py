@@ -22,7 +22,7 @@ from homeassistant.util.distance import convert as convert_distance
 from homeassistant.util.pressure import convert as convert_pressure
 from homeassistant.util.temperature import convert as convert_temperature
 
-REQUIREMENTS = ['pynws']
+REQUIREMENTS = ['pynws==0.6']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +59,6 @@ FORECAST_CLASSES = {
     ATTR_FORECAST_DETAIL_DESCRIPTION: 'detailedForecast',
     ATTR_FORECAST_TEMP: 'temperature',
     ATTR_FORECAST_TIME: 'startTime',
-    ATTR_FORECAST_WIND_SPEED: 'windSpeed'
 }
 
 WIND_DIRECTIONS = ['N', 'NNE', 'NE', 'ENE',
@@ -131,7 +130,6 @@ async def async_setup_platform(hass, config, async_add_entities,
         return
 
     from pynws import Nws
-    # TODO: use api_key
     # TODO: pass unit system
     websession = async_get_clientsession(hass)
     nws = Nws(websession, latlon=(float(latitude), float(longitude)), userid=api_key)
@@ -159,7 +157,8 @@ class NWSWeather(WeatherEntity):
         self._station_name = config.get(CONF_NAME, self._nws.station)
         self._observation = None
         self._forecast = None
-        self._description=None
+        self._description = None
+        self._is_metric = config.units.is_metric
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
@@ -197,10 +196,19 @@ class NWSWeather(WeatherEntity):
         """Return the current pressure."""
         pressure_pa = self._observation[0]['seaLevelPressure']['value']
         #convert Pa to in Hg
-        if pressure_pa is not None:
-            pressure = convert_pressure(pressure_pa, PRESSURE_PA, PRESSURE_INHG)
-            return round(pressure, 2)
-        return None
+        if pressure_pa is None:
+            return None
+        
+        if self._is_metric:
+            pressure = convert_pressure(pressure_pa,
+                                        PRESSURE_PA, PRESSURE_HPA)
+            pressure = round(pressure)
+        else:
+            pressure = convert_pressure(pressure_pa,
+                                        PRESSURE_PA, PRESSURE_INHG)
+            pressure = round(pressure, 2)
+
+        return pressure
 
     @property
     def humidity(self):
@@ -210,13 +218,20 @@ class NWSWeather(WeatherEntity):
     @property
     def wind_speed(self):
         """Return the current windspeed."""
-        # covert to mi/hr from m/s
+        
         wind_m_s = self._observation[0]['windSpeed']['value']
-        if wind_m_s is not None:
-            wind_mi_s = convert_distance(wind_m_s, LENGTH_METERS, LENGTH_MILES)
-            wind_mi_hr = wind_mi_s * 3600
-            return round(wind_mi_hr)
-        return None
+        if wind_m_s is None:
+            return None
+        
+        wind_m_hr = wind_m_s * 3600
+
+        if self._is_metric:    
+            wind = convert_distance(wind_m_hr, LENGTH_METERS, LENGTH_KILOMETERS)
+        else:
+            wind = convert_distance(wind_m_hr, LENGTH_METERS, LENGTH_MILES)
+
+        return round(wind)
+
 
     @property
     def wind_bearing(self):
@@ -236,11 +251,18 @@ class NWSWeather(WeatherEntity):
     
     @property
     def visibility(self):
-        #convert to mi from m
-        vis = self._observation[0]['visibility']['value']
-        if vis is not None:
-            return round(convert_distance(vis, LENGTH_METERS, LENGTH_MILES), 1)
-        return None
+
+        vis_m = self._observation[0]['visibility']['value']
+
+        if vis_m is None:
+            return None
+
+        if self._is_metric:
+            vis = convert_distance(vis_m, LENGTH_METERS, LENGTH_KILOMETERS)
+        else:
+            vis = convert_distance(vis_m, LENGTH_METERS, LENGTH_MILES)
+
+        return round(vis,0 )
 
     @property
     def forecast(self):
@@ -259,7 +281,16 @@ class NWSWeather(WeatherEntity):
             data[ATTR_FORECAST_WIND_BEARING] = \
                     WIND[forecast_entry['windDirection']]
 
-            data[ATTR_FORECAST_WIND_SPEED] = ' '.join(forecast_entry['windSpeed'].split(' ')[:-1])
+            # wind speed reported as '7 mph' or '7 to 10 mph'
+            # if range, take average
+            wind_speed = forecast_entry['windSpeed'].split(' ')[0:2:]
+            wind_speed_avg = mean(wind_speed)
+            if self._is_metric:
+                data[ATTR_FORECAST_WIND_SPEED] = round(
+                    convert_distance(wind_speed_avg,
+                                     LENGTH_MILES, LENGTH_KILOMETERS))
+            else:
+                data[ATTR_FORECAST_WIND_SPEED] = round(wind_speed_avg)
 
             forecast.append(data)
         return forecast

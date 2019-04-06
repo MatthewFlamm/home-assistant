@@ -4,6 +4,7 @@ Support for NWS weather service.
 from collections import OrderedDict
 from datetime import timedelta
 import logging
+from statistics import mean
 
 import async_timeout
 import voluptuous as vol
@@ -145,20 +146,20 @@ async def async_setup_platform(hass, config, async_add_entities,
         nws.station = station
         _LOGGER.debug("Initialized station %s", station[0])
 
-    async_add_entities([NWSWeather(nws, config)], True)
+    async_add_entities([NWSWeather(nws, hass.config.units, config)], True)
 
 
 class NWSWeather(WeatherEntity):
     """Representation of a weather condition."""
 
-    def __init__(self, nws, config):
+    def __init__(self, nws, units, config):
         """Initialise the platform with a data instance and station name."""
         self._nws = nws
         self._station_name = config.get(CONF_NAME, self._nws.station)
         self._observation = None
         self._forecast = None
         self._description = None
-        self._is_metric = config.units.is_metric
+        self._is_metric = units.is_metric
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
@@ -283,8 +284,8 @@ class NWSWeather(WeatherEntity):
 
             # wind speed reported as '7 mph' or '7 to 10 mph'
             # if range, take average
-            wind_speed = forecast_entry['windSpeed'].split(' ')[0:2:]
-            wind_speed_avg = mean(wind_speed)
+            wind_speed = forecast_entry['windSpeed'].split(' ')[0::2]
+            wind_speed_avg = mean(int(w) for w in wind_speed)
             if self._is_metric:
                 data[ATTR_FORECAST_WIND_SPEED] = round(
                     convert_distance(wind_speed_avg,

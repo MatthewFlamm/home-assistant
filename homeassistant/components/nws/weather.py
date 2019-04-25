@@ -14,8 +14,9 @@ from homeassistant.components.weather import (
     ATTR_FORECAST_PRECIPITATION, ATTR_FORECAST_TEMP, ATTR_FORECAST_TIME,
     ATTR_FORECAST_WIND_SPEED, ATTR_FORECAST_WIND_BEARING)
 from homeassistant.const import (
-    CONF_API_KEY, CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE, LENGTH_METERS,
-    LENGTH_MILES, PRESSURE_PA, PRESSURE_INHG, TEMP_CELSIUS, TEMP_FAHRENHEIT)
+    CONF_API_KEY, CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE, CONF_MODE,
+    LENGTH_METERS, LENGTH_MILES, PRESSURE_PA, PRESSURE_INHG, TEMP_CELSIUS,
+    TEMP_FAHRENHEIT)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import Throttle
@@ -56,11 +57,12 @@ CONDITION_CLASSES = OrderedDict([
 ])
 
 FORECAST_CLASSES = {
-    ATTR_FORECAST_DAYTIME: 'isDaytime',
     ATTR_FORECAST_DETAIL_DESCRIPTION: 'detailedForecast',
     ATTR_FORECAST_TEMP: 'temperature',
     ATTR_FORECAST_TIME: 'startTime',
 }
+
+FORECAST_MODE = ['daynight', 'hourly']
 
 WIND_DIRECTIONS = ['N', 'NNE', 'NE', 'ENE',
                    'E', 'ESE', 'SE', 'SSE',
@@ -73,6 +75,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME): cv.string,
     vol.Optional(CONF_LATITUDE): cv.latitude,
     vol.Optional(CONF_LONGITUDE): cv.longitude,
+    vol.Optional(CONF_MODE, default='daynight'): vol.In(FORECAST_MODE),
     vol.Optional(CONF_STATION, default=''): cv.string,
     vol.Required(CONF_API_KEY): cv.string
 })
@@ -131,7 +134,7 @@ async def async_setup_platform(hass, config, async_add_entities,
         return
 
     from pynws import Nws
-    # TODO: pass unit system
+
     websession = async_get_clientsession(hass)
     nws = Nws(websession, latlon=(float(latitude), float(longitude)), userid=api_key)
 
@@ -139,6 +142,7 @@ async def async_setup_platform(hass, config, async_add_entities,
     if station == '':
         with async_timeout.timeout(10, loop=hass.loop):
             stations = await nws.stations()
+        _LOGGER.info("Station list: %s", stations)
         nws.station = stations[0]
         _LOGGER.debug("Initialized for coordinates %s, %s -> station %s",
                       latitude, longitude, stations[0])
@@ -160,6 +164,7 @@ class NWSWeather(WeatherEntity):
         self._forecast = None
         self._description = None
         self._is_metric = units.is_metric
+        self._mode = config[CONF_MODE]
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
@@ -169,8 +174,12 @@ class NWSWeather(WeatherEntity):
                           self._nws.station)
             self._observation = await self._nws.observations()
             _LOGGER.debug("Updating forecast")
-            self._forecast = await self._nws.forecast()
-
+            if self._mode = 'daynight':
+                self._forecast = await self._nws.forecast()
+            elif self._mode == 'hourly':
+                self._forecast = await self._nws.forecast_hourly()
+            else:
+                _LOGGER.error("Invalid Forecast Mode')
         _LOGGER.debug("Observations: %s", self._observation)
         _LOGGER.debug("Forecasts: %s", self._forecast)
         
@@ -271,7 +280,8 @@ class NWSWeather(WeatherEntity):
         for forecast_entry in self._forecast:
             data = {attr: forecast_entry[name]
                     for attr, name in FORECAST_CLASSES.items()}
-            
+            if self._mode == 'daynight':
+                    data[ATTR_FORECAST_DAYTIME] = forecast_entry['isDaytime']
             time, weather = parse_icon(forecast_entry['icon'])
             cond, precip = convert_condition(time, weather)
             data[ATTR_FORECAST_CONDITION] = cond

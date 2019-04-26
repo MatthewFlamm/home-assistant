@@ -4,7 +4,7 @@ from unittest.mock import patch
 from collections import namedtuple
 
 from homeassistant.components import weather
-from homeassistant.components.weather.nws import ATTR_FORECAST_PRECIP_PROB
+from homeassistant.components.nws.weather import ATTR_FORECAST_PRECIP_PROB
 from homeassistant.components.weather import (
     ATTR_WEATHER_HUMIDITY, ATTR_WEATHER_PRESSURE, ATTR_WEATHER_TEMPERATURE,
     ATTR_WEATHER_VISIBILITY, ATTR_WEATHER_WIND_BEARING,
@@ -17,8 +17,10 @@ from homeassistant.components.weather import (ATTR_FORECAST,
                                               ATTR_FORECAST_WIND_SPEED)
                                               
 from homeassistant.const import (LENGTH_METERS, LENGTH_MILES, PRECISION_WHOLE,
+                                 PRESSURE_INHG, PRESSURE_PA,
                                  TEMP_CELSIUS, TEMP_FAHRENHEIT)
 from homeassistant.helpers.temperature import display_temp
+from homeassistant.util.pressure import convert as convert_pressure
 from homeassistant.util.distance import convert as convert_distance
 from homeassistant.util.unit_system import IMPERIAL_SYSTEM
 from homeassistant.util.temperature import convert as convert_temperature
@@ -57,14 +59,14 @@ FORE = [{'endTime': '2018-12-21T18:00:00-05:00',
 STN = 'STNA'
 
 class MockNws():
-    """Mock Station from pyipma."""
-    def __init__(self, websession, latlon):
+    """Mock Station from pynws."""
+    def __init__(self, websession, latlon, userid):
         pass
     @classmethod
-    async def get(cls, websession, latlon):
+    '''async def get(cls, websession, latlon):
         """Mock Factory."""
         return MockNws()
-
+    '''
     async def observations(self):
         """Mock Observation."""
         return OBS
@@ -77,14 +79,14 @@ class MockNws():
         """Mock stations."""
         return [STN]
     
-    @property
+    '''@property
     def local(self):
         """Mock location."""
         return "HomeWeather"
-
+    '''
 
 class TestNWS(unittest.TestCase):
-    """Test the IPMA weather component."""
+    """Test the NWS weather component."""
 
     def setUp(self):
         """Set up things to be run when tests are started."""
@@ -100,12 +102,13 @@ class TestNWS(unittest.TestCase):
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
     def test_setup_w_name(self, mock_pynws):
-        """Test for successfully setting up the IPMA platform."""
+        """Test for successfully setting up the NWS platform with name."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
                 'name': 'HomeWeather',
                 'platform': 'nws',
                 'userid': 'test@test.com',
+                'api_key': 'test_email',
             }
         })
 
@@ -117,10 +120,10 @@ class TestNWS(unittest.TestCase):
         assert data.get(ATTR_WEATHER_TEMPERATURE) == \
             display_temp(self.hass, temp_f, TEMP_FAHRENHEIT, PRECISION_WHOLE)
         assert data.get(ATTR_WEATHER_HUMIDITY) == 10
-        assert data.get(ATTR_WEATHER_PRESSURE) == round(30000 / 3386.39, 2)
+        assert data.get(ATTR_WEATHER_PRESSURE) == round(convert_pressure(30000, PRESSURE_PA, PRESSURE_INHG), 2)
         assert data.get(ATTR_WEATHER_WIND_SPEED) == round(10 * 2.237)
         assert data.get(ATTR_WEATHER_WIND_BEARING) == 180
-        assert data.get(ATTR_WEATHER_VISIBILITY) == convert_distance(10000, LENGTH_METERS, LENGTH_MILES)
+        assert data.get(ATTR_WEATHER_VISIBILITY) == round(convert_distance(10000, LENGTH_METERS, LENGTH_MILES))
         assert state.attributes.get('friendly_name') == 'HomeWeather'
         
         forecast = data.get(ATTR_FORECAST)
@@ -129,17 +132,18 @@ class TestNWS(unittest.TestCase):
         assert forecast[0].get(ATTR_FORECAST_TEMP) == 41
         assert forecast[0].get(ATTR_FORECAST_TIME) == '2018-12-21T15:00:00-05:00'
         assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180
-        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == '8 to 10'
+        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == 9
 
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
     def test_setup_w_station(self, mock_pynws):
-        """Test for successfully setting up the IPMA platform."""
+        """Test for successfully setting up the NWS platform."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
                 'platform': 'nws',
                 'station': 'STNB',
                 'userid': 'test@test.com',
+                'api_key': 'test_email',
             }
         })
 
@@ -151,10 +155,10 @@ class TestNWS(unittest.TestCase):
         assert data.get(ATTR_WEATHER_TEMPERATURE) == \
             display_temp(self.hass, temp_f, TEMP_FAHRENHEIT, PRECISION_WHOLE)
         assert data.get(ATTR_WEATHER_HUMIDITY) == 10
-        assert data.get(ATTR_WEATHER_PRESSURE) == round(30000 / 3386.39, 2)
+        assert data.get(ATTR_WEATHER_PRESSURE) == round(convert_pressure(30000, PRESSURE_PA, PRESSURE_INHG), 2)
         assert data.get(ATTR_WEATHER_WIND_SPEED) == round(10 * 2.237)
         assert data.get(ATTR_WEATHER_WIND_BEARING) == 180
-        assert data.get(ATTR_WEATHER_VISIBILITY) == convert_distance(10000, LENGTH_METERS, LENGTH_MILES)
+        assert data.get(ATTR_WEATHER_VISIBILITY) == round(convert_distance(10000, LENGTH_METERS, LENGTH_MILES))
         assert state.attributes.get('friendly_name') == 'STNB'
         
         forecast = data.get(ATTR_FORECAST)
@@ -163,16 +167,17 @@ class TestNWS(unittest.TestCase):
         assert forecast[0].get(ATTR_FORECAST_TEMP) == 41
         assert forecast[0].get(ATTR_FORECAST_TIME) == '2018-12-21T15:00:00-05:00'
         assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180
-        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == '8 to 10'
+        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == 9
 
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
     def test_setup_get_stn(self, mock_pynws):
-        """Test for successfully setting up the IPMA platform."""
+        """Test for successfully setting up the NS platform."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
                 'platform': 'nws',
                 'userid': 'test@test.com',
+                'api_key': 'test_email',
             }
         })
 
@@ -184,10 +189,10 @@ class TestNWS(unittest.TestCase):
         assert data.get(ATTR_WEATHER_TEMPERATURE) == \
             display_temp(self.hass, temp_f, TEMP_FAHRENHEIT, PRECISION_WHOLE)
         assert data.get(ATTR_WEATHER_HUMIDITY) == 10
-        assert data.get(ATTR_WEATHER_PRESSURE) == round(30000 / 3386.39, 2)
+        assert data.get(ATTR_WEATHER_PRESSURE) == round(convert_pressure(30000, PRESSURE_PA, PRESSURE_INHG), 2)
         assert data.get(ATTR_WEATHER_WIND_SPEED) == round(10 * 2.237)
         assert data.get(ATTR_WEATHER_WIND_BEARING) == 180
-        assert data.get(ATTR_WEATHER_VISIBILITY) == convert_distance(10000, LENGTH_METERS, LENGTH_MILES)
+        assert data.get(ATTR_WEATHER_VISIBILITY) == round(convert_distance(10000, LENGTH_METERS, LENGTH_MILES))
         assert state.attributes.get('friendly_name') == STN
         
         forecast = data.get(ATTR_FORECAST)
@@ -196,4 +201,4 @@ class TestNWS(unittest.TestCase):
         assert forecast[0].get(ATTR_FORECAST_TEMP) == 41
         assert forecast[0].get(ATTR_FORECAST_TIME) == '2018-12-21T15:00:00-05:00'
         assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180
-        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == '8 to 10'
+        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == 9

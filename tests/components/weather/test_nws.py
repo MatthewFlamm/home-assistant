@@ -39,7 +39,7 @@ OBS = [{'temperature': {'value': 7, 'qualityControl': 'qc:V'},
         'seaLevelPressure': {'value': 30000, 'qualityControl':'qc:V'},
         'windGust': {'value': 10, 'qualityControl':'qc:V'},
         'dewpoint': {'value': 10, 'qualityControl':'qc:V'},
-        'icon': 'https://api.weather.gov/icons/land/night/ovc?size=medium',
+        'icon': 'https://api.weather.gov/icons/land/day/skc?size=medium',
         'textDescription': 'Cloudy'}]
 
 FORE = [{'endTime': '2018-12-21T18:00:00-05:00',
@@ -51,24 +51,22 @@ FORE = [{'endTime': '2018-12-21T18:00:00-05:00',
          'temperatureTrend': None,
          'temperature': 41,
          'temperatureUnit': 'F',
-         'detailedForecast': '',
+         'detailedForecast': 'A detailed description',
          'name': 'This Afternoon',
          'number': 1,
-         'icon': 'https://api.weather.gov/icons/land/day/skc/tsra,40/ovc?size=medium'}]
+         'icon': 'https://api.weather.gov/icons/land/day/skc/tsra,40?size=medium'}]
 
-HOURLY_FORE = [{'endTime': '2018-12-21T16:00:00-05:00',
-         'windSpeed': '9 mph',
-         'windDirection': 'S',
+HOURLY_FORE = [{'endTime': '2018-12-22T05:00:00-05:00',
+         'windSpeed': '4 mph',
+         'windDirection': 'N',
          'shortForecast': 'Chance Showers And Thunderstorms',
-         'isDaytime': True,
-         'startTime': '2018-12-21T15:00:00-05:00',
+         'startTime': '2018-12-22T04:00:00-05:00',
          'temperatureTrend': None,
-         'temperature': 41,
+         'temperature': 32,
          'temperatureUnit': 'F',
          'detailedForecast': '',
-         'name': 'This Afternoon',
-         'number': 1,
-         'icon': 'https://api.weather.gov/icons/land/day/skc/tsra,40/ovc?size=medium'}]
+         'number': 2,
+         'icon': 'https://api.weather.gov/icons/land/night/skc?size=medium'}]
 
 
 STN = 'STNA'
@@ -85,6 +83,10 @@ class MockNws():
     async def forecast(self):
         """Mock Forecast."""
         return FORE
+
+    async def forecast_hourly(self):
+        """Mock Forecast."""
+        return HOURLY_FORE
 
     async def stations(self):
         """Mock stations."""
@@ -107,7 +109,7 @@ class TestNWS(unittest.TestCase):
 
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
-    def test_setup_w_name(self, mock_pynws):
+    def test_w_name(self, mock_pynws):
         """Test for successfully setting up the NWS platform with name."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
@@ -119,7 +121,7 @@ class TestNWS(unittest.TestCase):
         })
 
         state = self.hass.states.get('weather.homeweather')
-        assert state.state == 'cloudy'
+        assert state.state == 'sunny'
 
         data = state.attributes
         temp_f = convert_temperature(7, TEMP_CELSIUS, TEMP_FAHRENHEIT)
@@ -142,7 +144,7 @@ class TestNWS(unittest.TestCase):
 
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
-    def test_setup_w_station(self, mock_pynws):
+    def test_w_station(self, mock_pynws):
         """Test for successfully setting up the NWS platform."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
@@ -153,31 +155,11 @@ class TestNWS(unittest.TestCase):
             }
         })
 
-        state = self.hass.states.get('weather.stnb')
-        assert state.state == 'cloudy'
-
-        data = state.attributes
-        temp_f = convert_temperature(7, TEMP_CELSIUS, TEMP_FAHRENHEIT)
-        assert data.get(ATTR_WEATHER_TEMPERATURE) == \
-            display_temp(self.hass, temp_f, TEMP_FAHRENHEIT, PRECISION_WHOLE)
-        assert data.get(ATTR_WEATHER_HUMIDITY) == 10
-        assert data.get(ATTR_WEATHER_PRESSURE) == round(convert_pressure(30000, PRESSURE_PA, PRESSURE_INHG), 2)
-        assert data.get(ATTR_WEATHER_WIND_SPEED) == round(10 * 2.237)
-        assert data.get(ATTR_WEATHER_WIND_BEARING) == 180
-        assert data.get(ATTR_WEATHER_VISIBILITY) == round(convert_distance(10000, LENGTH_METERS, LENGTH_MILES))
-        assert state.attributes.get('friendly_name') == 'STNB'
-        
-        forecast = data.get(ATTR_FORECAST)
-        assert forecast[0].get(ATTR_FORECAST_CONDITION) == 'lightning-rainy'
-        assert forecast[0].get(ATTR_FORECAST_PRECIP_PROB) == 40
-        assert forecast[0].get(ATTR_FORECAST_TEMP) == 41
-        assert forecast[0].get(ATTR_FORECAST_TIME) == '2018-12-21T15:00:00-05:00'
-        assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180
-        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == 9
+        assert self.hass.states.get('weather.stnb')
 
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
-    def test_setup_get_stn(self, mock_pynws):
+    def test_w_no_name(self, mock_pynws):
         """Test for successfully setting up the NS platform."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
@@ -187,24 +169,63 @@ class TestNWS(unittest.TestCase):
             }
         })
 
-        state = self.hass.states.get('weather.' + STN)
-        assert state.state == 'cloudy'
+        assert self.hass.states.get('weather.' + STN)
 
+    @MockDependency("pynws")
+    @patch("pynws.Nws", new=MockNws)
+    def test__hourly(self, mock_pynws):
+        """Test for successfully setting up the NWS platform with name."""
+        assert setup_component(self.hass, weather.DOMAIN, {
+            'weather': {
+                'name': 'HourlyWeather',
+                'platform': 'nws',
+                'userid': 'test@test.com',
+                'api_key': 'test_email',
+                'mode': 'hourly',
+            }
+        })
+
+
+        state = self.hass.states.get('weather.hourlyweather')
         data = state.attributes
-        temp_f = convert_temperature(7, TEMP_CELSIUS, TEMP_FAHRENHEIT)
-        assert data.get(ATTR_WEATHER_TEMPERATURE) == \
-            display_temp(self.hass, temp_f, TEMP_FAHRENHEIT, PRECISION_WHOLE)
-        assert data.get(ATTR_WEATHER_HUMIDITY) == 10
-        assert data.get(ATTR_WEATHER_PRESSURE) == round(convert_pressure(30000, PRESSURE_PA, PRESSURE_INHG), 2)
-        assert data.get(ATTR_WEATHER_WIND_SPEED) == round(10 * 2.237)
-        assert data.get(ATTR_WEATHER_WIND_BEARING) == 180
-        assert data.get(ATTR_WEATHER_VISIBILITY) == round(convert_distance(10000, LENGTH_METERS, LENGTH_MILES))
-        assert state.attributes.get('friendly_name') == STN
         
         forecast = data.get(ATTR_FORECAST)
-        assert forecast[0].get(ATTR_FORECAST_CONDITION) == 'lightning-rainy'
-        assert forecast[0].get(ATTR_FORECAST_PRECIP_PROB) == 40
-        assert forecast[0].get(ATTR_FORECAST_TEMP) == 41
-        assert forecast[0].get(ATTR_FORECAST_TIME) == '2018-12-21T15:00:00-05:00'
-        assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180
-        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == 9
+        assert forecast[0].get(ATTR_FORECAST_CONDITION) == 'clear-night'
+        assert forecast[0].get(ATTR_FORECAST_PRECIP_PROB) is None
+        assert forecast[0].get(ATTR_FORECAST_TEMP) == 32
+        assert forecast[0].get(ATTR_FORECAST_TIME) == '2018-12-22T04:00:00-05:00'
+        assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 0
+        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == 4
+
+
+    @MockDependency("pynws")
+    @patch("pynws.Nws", new=MockNws)
+    def test_daynight(self, mock_pynws):
+        """Test for successfully setting up the NWS platform with name."""
+        assert setup_component(self.hass, weather.DOMAIN, {
+            'weather': {
+                'name': 'HourlyWeather',
+                'platform': 'nws',
+                'userid': 'test@test.com',
+                'api_key': 'test_email',
+                'mode': 'daynight',
+            }
+        })
+        assert self.hass.states.get('weather.hourlyweather')
+
+    @MockDependency("pynws")
+    @patch("pynws.Nws", new=MockNws)
+    def test_setup_failures(self, mock_pynws):
+        """Test for successfully setting up the NWS platform with name."""
+        '''assert setup_component(self.hass, weather.DOMAIN, {
+            'weather': {
+                'name': 'HourlyWeather',
+                'platform': 'nws',
+                'userid': 'test@test.com',
+                'api_key': 'test_email',
+                'mode': 'daynight',
+            }
+        })
+        assert self.hass.states.get('weather.hourlyweather')
+        '''
+        pass

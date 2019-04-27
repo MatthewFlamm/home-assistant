@@ -56,17 +56,28 @@ FORE = [{'endTime': '2018-12-21T18:00:00-05:00',
          'number': 1,
          'icon': 'https://api.weather.gov/icons/land/day/skc/tsra,40/ovc?size=medium'}]
 
+HOURLY_FORE = [{'endTime': '2018-12-21T16:00:00-05:00',
+         'windSpeed': '9 mph',
+         'windDirection': 'S',
+         'shortForecast': 'Chance Showers And Thunderstorms',
+         'isDaytime': True,
+         'startTime': '2018-12-21T15:00:00-05:00',
+         'temperatureTrend': None,
+         'temperature': 41,
+         'temperatureUnit': 'F',
+         'detailedForecast': '',
+         'name': 'This Afternoon',
+         'number': 1,
+         'icon': 'https://api.weather.gov/icons/land/day/skc/tsra,40/ovc?size=medium'}]
+
+
 STN = 'STNA'
 
 class MockNws():
     """Mock Station from pynws."""
     def __init__(self, websession, latlon, userid):
         pass
-    @classmethod
-    '''async def get(cls, websession, latlon):
-        """Mock Factory."""
-        return MockNws()
-    '''
+
     async def observations(self):
         """Mock Observation."""
         return OBS
@@ -79,11 +90,6 @@ class MockNws():
         """Mock stations."""
         return [STN]
     
-    '''@property
-    def local(self):
-        """Mock location."""
-        return "HomeWeather"
-    '''
 
 class TestNWS(unittest.TestCase):
     """Test the NWS weather component."""

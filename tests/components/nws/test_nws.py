@@ -1,7 +1,8 @@
-"""The tests for the IPMA weather component."""
+"""Tests for the NWS weather component."""
 import unittest
 from unittest.mock import patch
 from collections import namedtuple
+import pytest
 
 from homeassistant.components import weather
 from homeassistant.components.nws.weather import ATTR_FORECAST_PRECIP_PROB
@@ -85,7 +86,7 @@ class MockNws():
         return FORE
 
     async def forecast_hourly(self):
-        """Mock Forecast."""
+        """Mock Hourly Forecast."""
         return HOURLY_FORE
 
     async def stations(self):
@@ -115,7 +116,6 @@ class TestNWS(unittest.TestCase):
             'weather': {
                 'name': 'HomeWeather',
                 'platform': 'nws',
-                'userid': 'test@test.com',
                 'api_key': 'test_email',
             }
         })
@@ -145,12 +145,11 @@ class TestNWS(unittest.TestCase):
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
     def test_w_station(self, mock_pynws):
-        """Test for successfully setting up the NWS platform."""
+        """Test for successfully setting up the NWS platform with station."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
                 'platform': 'nws',
                 'station': 'STNB',
-                'userid': 'test@test.com',
                 'api_key': 'test_email',
             }
         })
@@ -160,11 +159,10 @@ class TestNWS(unittest.TestCase):
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
     def test_w_no_name(self, mock_pynws):
-        """Test for successfully setting up the NS platform."""
+        """Test for successfully setting up the NWS platform w no name."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
                 'platform': 'nws',
-                'userid': 'test@test.com',
                 'api_key': 'test_email',
             }
         })
@@ -174,12 +172,11 @@ class TestNWS(unittest.TestCase):
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
     def test__hourly(self, mock_pynws):
-        """Test for successfully setting up the NWS platform with name."""
+        """Test for successfully setting up the NWS platform with hourly forecast."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
                 'name': 'HourlyWeather',
                 'platform': 'nws',
-                'userid': 'test@test.com',
                 'api_key': 'test_email',
                 'mode': 'hourly',
             }
@@ -201,31 +198,53 @@ class TestNWS(unittest.TestCase):
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
     def test_daynight(self, mock_pynws):
-        """Test for successfully setting up the NWS platform with name."""
+        """Test for successfully setting up the NWS platform with daynight forecast."""
         assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
-                'name': 'HourlyWeather',
                 'platform': 'nws',
-                'userid': 'test@test.com',
                 'api_key': 'test_email',
                 'mode': 'daynight',
             }
         })
-        assert self.hass.states.get('weather.hourlyweather')
+        assert self.hass.states.get('weather.' + STN)
 
     @MockDependency("pynws")
     @patch("pynws.Nws", new=MockNws)
-    def test_setup_failures(self, mock_pynws):
-        """Test for successfully setting up the NWS platform with name."""
-        '''assert setup_component(self.hass, weather.DOMAIN, {
+    def test_latlon(self, mock_pynws):
+        """Test for successfully setting up the NWS platform with lat/lon"""
+        assert setup_component(self.hass, weather.DOMAIN, {
             'weather': {
-                'name': 'HourlyWeather',
                 'platform': 'nws',
-                'userid': 'test@test.com',
                 'api_key': 'test_email',
-                'mode': 'daynight',
+                'latitude': self.lat,
+                'longitude': self.lon,
             }
         })
-        assert self.hass.states.get('weather.hourlyweather')
-        '''
-        pass
+        assert self.hass.states.get('weather.' + STN)
+
+        
+    @MockDependency("pynws")
+    @patch("pynws.Nws", new=MockNws)
+    def test_setup_failure_mode(self, mock_pynws):
+        """Test for unsuccessfully setting up the NWS platform with incorrect mode."""
+        assert setup_component(self.hass, weather.DOMAIN, {
+            'weather': {
+                'platform': 'nws',
+                'api_key': 'test_email',
+                'mode': 'abc',
+            }
+        })
+        assert self.hass.states.get('weather.' + STN) is None
+
+    @MockDependency("pynws")
+    @patch("pynws.Nws", new=MockNws)
+    def test_setup_failure_no_apikey(self, mock_pynws):
+        """Test for unsuccessfully setting up the NWS platform without api_key."""
+        assert setup_component(self.hass, weather.DOMAIN, {
+            'weather': {
+                'platform': 'nws',
+                }
+        })
+        
+        assert self.hass.states.get('weather.' + STN) is None
+

@@ -1,0 +1,22 @@
+[36mgit merge-base upstream/dev HEAD[0m
+[36mgit diff 7a6acca6bb1f2aca2f7f977c20cb513f5f331328 --name-only[0m
+=============================
+[01mCHANGED FILES:
+ homeassistant/components/nws/__init__.py
+ homeassistant/components/nws/weather.py
+ tests/components/nws/test_nws.py[0m
+=============================
+[36mpylint -f parseable --persistent=n \
+  homeassistant/components/nws/__init__.py \
+  homeassistant/components/nws/weather.py \
+  tests/components/nws/test_nws.py[0m
+[36mflake8 --doctests \
+  homeassistant/components/nws/__init__.py \
+  homeassistant/components/nws/weather.py \
+  tests/components/nws/test_nws.py[0m
+[32mPylint and Flake8 passed[0m
+=============================
+******* ERROR
+Errors while importing:  The manifest for component insteon_local is invalid., The manifest for component insteon_plm is invalid., The manifest for component introduction is invalid.
+Make sure you import 3rd party libraries inside methods.
+[01;31mPlease run script/gen_requirements.py[0m

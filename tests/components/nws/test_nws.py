@@ -8,20 +8,17 @@ from homeassistant.components.weather import (
     ATTR_WEATHER_HUMIDITY, ATTR_WEATHER_PRESSURE, ATTR_WEATHER_TEMPERATURE,
     ATTR_WEATHER_VISIBILITY, ATTR_WEATHER_WIND_BEARING,
     ATTR_WEATHER_WIND_SPEED)
-from homeassistant.components.weather import (ATTR_FORECAST,
-                                              ATTR_FORECAST_CONDITION,
-                                              ATTR_FORECAST_TEMP,
-                                              ATTR_FORECAST_TIME,
-                                              ATTR_FORECAST_WIND_BEARING,
-                                              ATTR_FORECAST_WIND_SPEED)
+from homeassistant.components.weather import (
+    ATTR_FORECAST, ATTR_FORECAST_CONDITION, ATTR_FORECAST_TEMP,
+    ATTR_FORECAST_TIME, ATTR_FORECAST_WIND_BEARING, ATTR_FORECAST_WIND_SPEED)
 
-from homeassistant.const import (LENGTH_METERS, LENGTH_MILES, PRECISION_WHOLE,
-                                 PRESSURE_INHG, PRESSURE_PA,
-                                 TEMP_CELSIUS, TEMP_FAHRENHEIT)
+from homeassistant.const import (
+    LENGTH_KILOMETERS, LENGTH_METERS, LENGTH_MILES, PRECISION_WHOLE,
+    PRESSURE_INHG, PRESSURE_PA, PRESSURE_HPA, TEMP_CELSIUS, TEMP_FAHRENHEIT)
 from homeassistant.helpers.temperature import display_temp
 from homeassistant.util.pressure import convert as convert_pressure
 from homeassistant.util.distance import convert as convert_distance
-from homeassistant.util.unit_system import IMPERIAL_SYSTEM
+from homeassistant.util.unit_system import IMPERIAL_SYSTEM, METRIC_SYSTEM
 from homeassistant.util.temperature import convert as convert_temperature
 from homeassistant.setup import setup_component
 
@@ -254,3 +251,57 @@ class TestNWS(unittest.TestCase):
         })
 
         assert self.hass.states.get('weather.' + STN) is None
+
+
+class TestNWS_SI(unittest.TestCase):
+    """Test the NWS weather component using metric units."""
+
+    def setUp(self):
+        """Set up things to be run when tests are started."""
+        self.hass = get_test_home_assistant()
+        self.hass.config.units = METRIC_SYSTEM
+        self.lat = self.hass.config.latitude = 40.00
+        self.lon = self.hass.config.longitude = -8.00
+
+    def tearDown(self):
+        """Stop down everything that was started."""
+        self.hass.stop()
+
+    @MockDependency("pynws")
+    @patch("pynws.Nws", new=MockNws)
+    def test_metric(self, mock_pynws):
+        """Test for successfully setting up the NWS platform with name."""
+        assert setup_component(self.hass, weather.DOMAIN, {
+            'weather': {
+                'name': 'HomeWeather',
+                'platform': 'nws',
+                'api_key': 'test_email',
+            }
+        })
+
+        state = self.hass.states.get('weather.homeweather')
+        assert state.state == 'sunny'
+
+        data = state.attributes
+        assert data.get(ATTR_WEATHER_TEMPERATURE) == \
+            display_temp(self.hass, 7, TEMP_CELSIUS, PRECISION_WHOLE)
+
+        assert data.get(ATTR_WEATHER_HUMIDITY) == 10
+        assert data.get(ATTR_WEATHER_PRESSURE) == round(
+            convert_pressure(30000, PRESSURE_PA, PRESSURE_HPA))
+        # m/s to km/hr
+        assert data.get(ATTR_WEATHER_WIND_SPEED) == round(10 * 3.6)
+        assert data.get(ATTR_WEATHER_WIND_BEARING) == 180
+        assert data.get(ATTR_WEATHER_VISIBILITY) == round(
+            convert_distance(10000, LENGTH_METERS, LENGTH_KILOMETERS))
+        assert state.attributes.get('friendly_name') == 'HomeWeather'
+
+        forecast = data.get(ATTR_FORECAST)
+        assert forecast[0].get(ATTR_FORECAST_CONDITION) == 'lightning-rainy'
+        assert forecast[0].get(ATTR_FORECAST_PRECIP_PROB) == 40
+        assert forecast[0].get(ATTR_FORECAST_TEMP) == round(convert_temperature(41, TEMP_FAHRENHEIT, TEMP_CELSIUS))
+        assert forecast[0].get(ATTR_FORECAST_TIME) == \
+            '2018-12-21T15:00:00-05:00'
+        assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180
+        assert forecast[0].get(ATTR_FORECAST_WIND_SPEED) == round(
+            convert_distance(9, LENGTH_MILES, LENGTH_KILOMETERS))

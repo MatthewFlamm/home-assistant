@@ -104,7 +104,7 @@ def convert_condition(time, weather):
     Convert NWS codes to HA condition.
 
     Choose first condition in CONDITION_CLASSES that exists in weather code.
-    If no match is found, return condition from NWS
+    If no match is found, return fitst condition from NWS
     """
     conditions = [w[0] for w in weather]
     prec_prob = [w[1] for w in weather]
@@ -137,8 +137,10 @@ async def async_setup_platform(hass, config, async_add_entities,
     from pynws import Nws
 
     websession = async_get_clientsession(hass)
+    # ID request as being from HA, pynws prepends the api_key in addition
+    api_key_ha = [api_key + 'homeassistant']
     nws = Nws(websession, latlon=(float(latitude), float(longitude)),
-              userid=api_key)
+              userid=api_key_ha)
 
     _LOGGER.debug("Setting up station: %s", station)
     if station == '':

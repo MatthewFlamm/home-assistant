@@ -253,7 +253,7 @@ class TestNWS(unittest.TestCase):
         assert self.hass.states.get('weather.' + STN) is None
 
 
-class TestNWS_SI(unittest.TestCase):
+class TestNwsMetric(unittest.TestCase):
     """Test the NWS weather component using metric units."""
 
     def setUp(self):
@@ -299,7 +299,8 @@ class TestNWS_SI(unittest.TestCase):
         forecast = data.get(ATTR_FORECAST)
         assert forecast[0].get(ATTR_FORECAST_CONDITION) == 'lightning-rainy'
         assert forecast[0].get(ATTR_FORECAST_PRECIP_PROB) == 40
-        assert forecast[0].get(ATTR_FORECAST_TEMP) == round(convert_temperature(41, TEMP_FAHRENHEIT, TEMP_CELSIUS))
+        assert forecast[0].get(ATTR_FORECAST_TEMP) == round(
+            convert_temperature(41, TEMP_FAHRENHEIT, TEMP_CELSIUS))
         assert forecast[0].get(ATTR_FORECAST_TIME) == \
             '2018-12-21T15:00:00-05:00'
         assert forecast[0].get(ATTR_FORECAST_WIND_BEARING) == 180

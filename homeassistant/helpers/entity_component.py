@@ -13,7 +13,7 @@ from homeassistant.const import (
     ENTITY_MATCH_ALL,
 )
 from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, NoEntitySpecifiedError
 from homeassistant.helpers import config_per_platform, discovery
 from homeassistant.helpers.config_validation import ENTITY_SERVICE_SCHEMA
 from homeassistant.helpers.service import async_extract_entity_ids
@@ -180,17 +180,17 @@ class EntityComponent:
         """
         data_ent_id = service.data.get(ATTR_ENTITY_ID)
 
-        if data_ent_id in (None, ENTITY_MATCH_ALL):
-            if data_ent_id is None:
-                self.logger.warning(
-                    "Not passing an entity ID to a service to target all "
-                    "entities is deprecated. Update your call to %s.%s to be "
-                    "instead: entity_id: %s",
-                    service.domain,
-                    service.service,
-                    ENTITY_MATCH_ALL,
-                )
-
+        if data_ent_id is None:
+            self.logger.error(
+                "Not passing an entity ID to a service to target all "
+                "entities is disallowed. Update your call to %s.%s to be "
+                "instead: entity_id: %s",
+                service.domain,
+                service.service,
+                ENTITY_MATCH_ALL,
+            )
+            raise NoEntitySpecifiedError
+        if data_ent_id == ENTITY_MATCH_ALL:
             return [entity for entity in self.entities if entity.available]
 
         entity_ids = await async_extract_entity_ids(self.hass, service, expand_group)

@@ -11,6 +11,7 @@ from homeassistant.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL, ATTR_AREA_ID
 import homeassistant.core as ha
 from homeassistant.exceptions import (
     HomeAssistantError,
+    NoEntitySpecifiedError,
     TemplateError,
     Unauthorized,
     UnknownUser,
@@ -245,9 +246,7 @@ def async_set_service_schema(hass, domain, service, schema):
 
 
 @bind_hass
-async def entity_service_call(
-    hass, platforms, func, call, service_name="", required_features=None
-):
+async def entity_service_call(hass, platforms, func, call, required_features=None):
     """Handle an entity service call.
 
     Calls all platforms simultaneously.
@@ -264,15 +263,13 @@ async def entity_service_call(
     if ATTR_ENTITY_ID in call.data:
         target_all_entities = call.data[ATTR_ENTITY_ID] == ENTITY_MATCH_ALL
     else:
-        # Remove the service_name parameter along with this warning
-        _LOGGER.warning(
+        _LOGGER.error(
             "Not passing an entity ID to a service to target all "
-            "entities is deprecated. Update your call to %s to be "
+            "entities is disallowed. Update your call to be "
             "instead: entity_id: %s",
-            service_name,
             ENTITY_MATCH_ALL,
         )
-        target_all_entities = True
+        raise NoEntitySpecifiedError
 
     if not target_all_entities:
         # A set of entities we're trying to target.

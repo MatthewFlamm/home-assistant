@@ -717,7 +717,7 @@ PLATFORM_SCHEMA_BASE = PLATFORM_SCHEMA.extend({}, extra=vol.ALLOW_EXTRA)
 
 ENTITY_SERVICE_SCHEMA = vol.Schema(
     {
-        vol.Optional(ATTR_ENTITY_ID): comp_entity_ids,
+        vol.Required(ATTR_ENTITY_ID): comp_entity_ids,
         vol.Optional(ATTR_AREA_ID): vol.All(ensure_list, [str]),
     }
 )

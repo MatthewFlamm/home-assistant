@@ -21,14 +21,9 @@ from .const import (
 
 from tests.common import mock_coro
 
-MINIMAL_CONFIG = {
-    "weather": {
-        "platform": "nws",
-        "api_key": "x@example.com",
-        "latitude": 40.0,
-        "longitude": -85.0,
-    }
-}
+
+import pytest
+
 
 HOURLY_CONFIG = {
     "weather": {
@@ -116,13 +111,6 @@ async def test_none_values(hass):
         await async_setup_component(hass, "weather", MINIMAL_CONFIG)
 
     state = hass.states.get("weather.abc")
-    assert state
-    assert state.state == "unknown"
-
-    data = state.attributes
-    for key in EXPECTED_OBSERVATION_IMPERIAL:
-        assert data.get(key) is None
-
     forecast = data.get(ATTR_FORECAST)
     for key in EXPECTED_FORECAST_IMPERIAL:
         assert forecast[0].get(key) is None

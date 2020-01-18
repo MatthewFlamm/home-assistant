@@ -119,7 +119,19 @@ class NwsData:
 
     async def update(self, now=None):
         """Update all data."""
-        await self.nws.update_observation()
-        await self.nws.update_forecast()
-        await self.nws.update_forecast_hourly()
+        try:
+            await self.nws.update_observation()
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            _LOGGER.error("Error updating observation: %s", err)
+
+        try:
+            await self.nws.update_forecast()
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            _LOGGER.error("Error updating forecast: %s", err)
+
+        try:
+            await self.nws.update_forecast_hourly()
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            _LOGGER.error("Error updating forecast hourly: %s", err)
+
         async_dispatcher_send(self.hass, DOMAIN)

@@ -1,20 +1,25 @@
 """Tests for init module."""
-from unittest.mock import patch
-
+from homeassistant.components import nws
 from homeassistant.components.nws.const import DOMAIN
 
-from .helpers import setup_nws
-from .helpers.pynws import mock_nws
+from tests.components.nws.const import MOCK_ENTRY
 
 
-async def test_unload(hass):
+async def test_successful_config_entry(hass, mock_simple_nws):
+    """Test that nws config entry is configured successfully."""
+    entry = MOCK_ENTRY
+    entry.add_to_hass(hass)
+    assert await nws.async_setup(hass, {}) is True
+    assert await nws.async_setup_entry(hass, entry) is True
+
+
+async def test_unload(hass, mock_simple_nws):
     """Test a successful unload of entry."""
-    MockNws = mock_nws()
-    with patch("homeassistant.components.nws.SimpleNWS", return_value=MockNws()), patch(
-        "homeassistant.components.nws.config_flow.SimpleNWS", return_value=MockNws()
-    ):
-        await setup_nws(hass)
-        await hass.async_block_till_done()
+    entry = MOCK_ENTRY
+    entry.add_to_hass(hass)
+    assert await nws.async_setup(hass, {}) is True
+    assert await nws.async_setup_entry(hass, entry) is True
+    await hass.async_block_till_done()
 
     assert len(hass.data[DOMAIN]) == 1
     entry_id = list(hass.data[DOMAIN].keys())[0]

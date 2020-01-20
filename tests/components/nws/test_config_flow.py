@@ -1,12 +1,12 @@
 """Test the National Weather Service config flow."""
 from unittest.mock import patch
 
+import aiohttp
+import pytest
+
 from homeassistant import config_entries, setup
 from homeassistant.components.nws import unique_id
-from homeassistant.components.nws.config_flow import CannotConnect
 from homeassistant.components.nws.const import DOMAIN
-
-from .helpers.pynws import mock_nws
 
 from tests.common import mock_coro
 
@@ -53,15 +53,25 @@ async def test_form(hass):
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_cannot_connect(hass):
-    """Test we handle cannot connect error."""
+class UnspecifiedError(Exception):
+    """Unspecified error for testing."""
+
+    pass
+
+
+@pytest.mark.parametrize(
+    "error,result_error",
+    [(aiohttp.ClientError, "cannot_connect"), (UnspecifiedError, "unknown")],
+)
+async def test_form_validate_errors(hass, error, result_error):
+    """Test we handle errors in validation."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.nws.config_flow.validate_input",
-        side_effect=CannotConnect,
+        "homeassistant.components.nws.config_flow.SimpleNWS.set_station",
+        side_effect=error,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -69,18 +79,22 @@ async def test_form_cannot_connect(hass):
         )
 
     assert result2["type"] == "form"
-    assert result2["errors"] == {"base": "cannot_connect"}
+    assert result2["errors"] == {"base": result_error}
 
 
 async def test_duplicate_entry(hass):
     """Test we handle cannot have duplicate entries."""
     await setup.async_setup_component(hass, "persistent_notification", {})
-    MockNws = mock_nws()
-    with patch(
-        "homeassistant.components.nws.SimpleNWS", return_value=MockNws(),
-    ), patch(
-        "homeassistant.components.nws.config_flow.SimpleNWS", return_value=MockNws(),
-    ):
+
+    with patch("homeassistant.components.nws.config_flow.SimpleNWS") as mock_nws, patch(
+        "homeassistant.components.nws.async_setup", return_value=mock_coro(True)
+    ) as mock_setup, patch(
+        "homeassistant.components.nws.async_setup_entry", return_value=mock_coro(True),
+    ) as mock_setup_entry:
+        instance = mock_nws.return_value
+        instance.station = "ABC"
+        instance.stations = ["ABC"]
+        instance.set_station.return_value = mock_coro()
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
@@ -91,6 +105,10 @@ async def test_duplicate_entry(hass):
         await hass.config_entries.flow.async_configure(
             result2["flow_id"], {"station": "ABC"},
         )
+        assert mock_setup.call_count == 1
+        assert mock_setup_entry.call_count == 1
+        mock_setup.reset_mock()
+        mock_setup_entry.reset_mock()
 
         result_entry2 = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -101,6 +119,8 @@ async def test_duplicate_entry(hass):
         )
 
         await hass.async_block_till_done()
+        assert mock_setup.call_count == 0
+        assert mock_setup_entry.call_count == 0
 
     assert result2_entry2["type"] == "form"
     assert result2_entry2["errors"] == {"base": "already_configured"}

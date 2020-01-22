@@ -99,7 +99,13 @@ class DomainConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_station(self, user_input=None):
         """Confirm station selection.."""
         errors = {}
-        data_schema = vol.Schema({CONF_STATION: vol.In(self.stations)})
+        data_schema = vol.Schema(
+            {
+                vol.Optional(CONF_STATION, default=self.stations[0]): vol.In(
+                    self.stations
+                )
+            }
+        )
         if user_input is None:
             return self.async_show_form(
                 step_id="station", data_schema=data_schema, errors=errors

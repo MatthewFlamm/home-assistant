@@ -41,6 +41,7 @@ MOCK_ENTRY = MockConfigEntry(
         CONF_STATION: "ABC",
         CONF_API_KEY: "test",
     },
+    title="50.5_-75.5",
 )
 
 DEFAULT_STATIONS = ["ABC", "XYZ"]

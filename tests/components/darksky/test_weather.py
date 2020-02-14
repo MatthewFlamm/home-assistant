@@ -48,7 +48,7 @@ class TestDarkSky(unittest.TestCase):
         assert mock_get_forecast.call_count == 1
 
         state = self.hass.states.get("weather.test")
-        assert state.state == "sunny"
+        assert state.state == "clear"
 
     @patch("forecastio.load_forecast", side_effect=ConnectionError())
     def test_failed_setup(self, mock_load_forecast):

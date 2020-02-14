@@ -78,7 +78,7 @@ SENSOR_TYPES = {
 }
 
 CONDITION_CLASSES = {
-    "clear-night": ["Nuit Claire"],
+    "clear": ["Nuit Claire", "Ensoleillé"],
     "cloudy": ["Très nuageux"],
     "fog": ["Brume ou bancs de brouillard", "Brouillard", "Brouillard givrant"],
     "hail": ["Risque de grêle"],
@@ -105,7 +105,6 @@ CONDITION_CLASSES = {
         "Quelques flocons",
     ],
     "snowy-rainy": ["Pluie et neige", "Pluie verglaçante"],
-    "sunny": ["Ensoleillé"],
     "windy": [],
     "windy-variant": [],
     "exceptional": [],

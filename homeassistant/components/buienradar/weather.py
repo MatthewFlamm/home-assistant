@@ -40,6 +40,7 @@ CONF_FORECAST = "forecast"
 
 
 CONDITION_CLASSES = {
+    "clear": ["a"],
     "cloudy": ["c", "p"],
     "fog": ["d", "n"],
     "hail": [],
@@ -50,7 +51,6 @@ CONDITION_CLASSES = {
     "rainy": ["f", "h", "k", "m"],
     "snowy": ["u", "i", "v", "t"],
     "snowy-rainy": ["w"],
-    "sunny": ["a"],
     "windy": [],
     "windy-variant": [],
     "exceptional": [],

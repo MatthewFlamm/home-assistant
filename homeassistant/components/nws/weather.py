@@ -111,7 +111,7 @@ CONDITION_CLASSES = OrderedDict(
             ],
         ),
         ("fog", ["Fog/mist"]),
-        ("clear", ["Fair/clear"]),  # sunny and clear-night
+        ("clear", ["Fair/clear"]),
         ("cloudy", ["Mostly cloudy", "Overcast"]),
         ("partlycloudy", ["A few clouds", "Partly cloudy"]),
     ]
@@ -157,11 +157,6 @@ def convert_condition(time, weather):
         conditions[0],
     )
 
-    if cond == "clear":
-        if time == "day":
-            return "sunny", max(prec_probs)
-        if time == "night":
-            return "clear-night", max(prec_probs)
     return cond, max(prec_probs)
 
 

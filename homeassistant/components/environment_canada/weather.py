@@ -52,8 +52,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 # Icon codes from http://dd.weatheroffice.ec.gc.ca/citypage_weather/
 # docs/current_conditions_icon_code_descriptions_e.csv
 ICON_CONDITION_MAP = {
-    "sunny": [0, 1],
-    "clear-night": [30, 31],
+    "clear": [0, 1, 30, 31],
     "partlycloudy": [2, 3, 4, 5, 22, 32, 33, 34, 35],
     "cloudy": [10],
     "rainy": [6, 9, 11, 12, 28, 36],

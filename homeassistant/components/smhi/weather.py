@@ -29,6 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Used to map condition from API results
 CONDITION_CLASSES = {
+    "clear": [1, 2],
     "cloudy": [5, 6],
     "fog": [7],
     "hail": [],
@@ -39,7 +40,6 @@ CONDITION_CLASSES = {
     "rainy": [8, 9, 18, 19],
     "snowy": [15, 16, 17, 25, 26, 27],
     "snowy-rainy": [12, 13, 14, 22, 23, 24],
-    "sunny": [1, 2],
     "windy": [],
     "windy-variant": [],
     "exceptional": [],

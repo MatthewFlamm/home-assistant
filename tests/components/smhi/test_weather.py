@@ -54,7 +54,7 @@ async def test_setup_hass(hass: HomeAssistant, aioclient_mock) -> None:
     #  deeper testing than normal unity test
     state = hass.states.get("weather.smhi_test")
 
-    assert state.state == "sunny"
+    assert state.state == "clear"
     assert state.attributes[ATTR_SMHI_CLOUDINESS] == 50
     assert state.attributes[ATTR_WEATHER_ATTRIBUTION].find("SMHI") >= 0
     assert state.attributes[ATTR_WEATHER_HUMIDITY] == 55
@@ -243,9 +243,9 @@ def test_condition_class():
     # http://opendata.smhi.se/apidocs/metfcst/parameters.html
 
     # 1. Clear sky
-    assert get_condition(1) == "sunny"
+    assert get_condition(1) == "clear"
     # 2. Nearly clear sky
-    assert get_condition(2) == "sunny"
+    assert get_condition(2) == "clear"
     # 3. Variable cloudiness
     assert get_condition(3) == "partlycloudy"
     # 4. Halfclear sky

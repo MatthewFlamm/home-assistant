@@ -42,7 +42,7 @@ class TestWeather(unittest.TestCase):
         state = self.hass.states.get("weather.demo_weather_south")
         assert state is not None
 
-        assert state.state == "sunny"
+        assert state.state == "clear"
 
         data = state.attributes
         assert data.get(ATTR_WEATHER_TEMPERATURE) == 21.6

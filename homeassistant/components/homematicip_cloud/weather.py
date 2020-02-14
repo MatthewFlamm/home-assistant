@@ -19,7 +19,7 @@ from .hap import HomematicipHAP
 _LOGGER = logging.getLogger(__name__)
 
 HOME_WEATHER_CONDITION = {
-    WeatherCondition.CLEAR: "sunny",
+    WeatherCondition.CLEAR: "clear",
     WeatherCondition.LIGHT_CLOUDY: "partlycloudy",
     WeatherCondition.CLOUDY: "cloudy",
     WeatherCondition.CLOUDY_WITH_RAIN: "rainy",
@@ -100,7 +100,7 @@ class HomematicipWeatherSensor(HomematicipGenericDevice, WeatherEntity):
         if self._device.storm:
             return "windy"
         if self._device.sunshine:
-            return "sunny"
+            return "clear"
         return ""
 
 

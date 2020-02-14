@@ -28,6 +28,7 @@ ATTRIBUTION = "Instituto Português do Mar e Atmosfera"
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=30)
 
 CONDITION_CLASSES = {
+    "clear": [1],
     "cloudy": [4, 5, 24, 25, 27],
     "fog": [16, 17, 26],
     "hail": [21, 22],
@@ -38,7 +39,6 @@ CONDITION_CLASSES = {
     "rainy": [6, 7, 9, 10, 12, 13, 14, 15],
     "snowy": [18],
     "snowy-rainy": [],
-    "sunny": [1],
     "windy": [],
     "windy-variant": [],
     "exceptional": [],

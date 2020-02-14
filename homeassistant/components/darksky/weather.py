@@ -40,8 +40,8 @@ ATTRIBUTION = "Powered by Dark Sky"
 FORECAST_MODE = ["hourly", "daily"]
 
 MAP_CONDITION = {
-    "clear-day": "sunny",
-    "clear-night": "clear-night",
+    "clear-day": "clear",
+    "clear-night": "clear",
     "rain": "rainy",
     "snow": "snowy",
     "sleet": "snowy-rainy",

@@ -64,7 +64,7 @@ async def test_imperial_metric(hass, units, result_observation, result_forecast)
 
     state = hass.states.get("weather.abc")
     assert state
-    assert state.state == "sunny"
+    assert state.state == "clear"
 
     data = state.attributes
     for key, value in result_observation.items():
@@ -92,7 +92,7 @@ async def test_hourly(hass):
 
     state = hass.states.get("weather.abc")
     assert state
-    assert state.state == "sunny"
+    assert state.state == "clear"
 
     data = state.attributes
     for key, value in EXPECTED_OBSERVATION_IMPERIAL.items():

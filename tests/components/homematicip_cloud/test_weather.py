@@ -55,7 +55,7 @@ async def test_hmip_weather_sensor_pro(hass, default_mock_hap):
         hass, default_mock_hap, entity_id, entity_name, device_model
     )
 
-    assert ha_state.state == "sunny"
+    assert ha_state.state == "clear"
     assert ha_state.attributes[ATTR_WEATHER_TEMPERATURE] == 15.4
     assert ha_state.attributes[ATTR_WEATHER_HUMIDITY] == 65
     assert ha_state.attributes[ATTR_WEATHER_WIND_SPEED] == 2.6

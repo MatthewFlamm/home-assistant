@@ -80,6 +80,7 @@ FLOWS = [
     "nexia",
     "notion",
     "nuheat",
+    "nws",
     "opentherm_gw",
     "openuv",
     "owntracks",

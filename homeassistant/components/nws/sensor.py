@@ -195,7 +195,10 @@ class NWSSensor(CoordinatorEntity[NwsDataUpdateCoordinator], SensorEntity):
     @property
     def native_value(self) -> float | None:
         """Return the state."""
-        value = self._nws.observation.get(self.entity_description.key)
+        obs = self._nws.observation
+        if obs is None:
+            return None
+        value = obs.get(self.entity_description.key)
         if value is None:
             return None
         # Set alias to unit property -> prevent unnecessary hasattr calls

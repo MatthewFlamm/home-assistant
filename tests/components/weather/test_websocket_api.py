@@ -1,9 +1,6 @@
 """Test the weather websocket API."""
 
-from homeassistant.components.weather import (
-    Forecast,
-    WeatherEntityFeature,
-)
+from homeassistant.components.weather import Forecast, WeatherEntityFeature
 from homeassistant.components.weather.const import DOMAIN, FORECAST_DAILY
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant

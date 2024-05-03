@@ -8,16 +8,7 @@ from contextlib import suppress
 from datetime import timedelta
 from functools import cached_property, partial
 import logging
-from typing import (
-    Any,
-    Final,
-    Generic,
-    Required,
-    TypedDict,
-    TypeVar,
-    cast,
-    final,
-)
+from typing import Any, Final, Generic, Required, TypedDict, TypeVar, cast, final
 
 import voluptuous as vol
 
@@ -76,11 +67,11 @@ from .const import (
     ATTR_WEATHER_WIND_SPEED,
     ATTR_WEATHER_WIND_SPEED_UNIT,
     DOMAIN,
-    FORECAST_TYPE,
-    FORECASTS,
     FORECAST_DAILY,
     FORECAST_HOURLY,
     FORECAST_TWICE_DAILY,
+    FORECAST_TYPE,
+    FORECASTS,
     UNIT_CONVERSIONS,
     VALID_UNITS,
     WeatherEntityFeature,

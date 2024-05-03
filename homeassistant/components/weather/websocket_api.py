@@ -12,11 +12,16 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util.json import JsonValueType
 
-from .const import (DOMAIN, VALID_UNITS, WeatherEntityFeature, FORECAST_DAILY,
+from .const import (
+    DOMAIN,
+    FORECAST_DAILY,
     FORECAST_HOURLY,
     FORECAST_TWICE_DAILY,
     FORECAST_TYPE,
-    FORECASTS,)
+    FORECASTS,
+    VALID_UNITS,
+    WeatherEntityFeature,
+)
 
 FORECAST_TYPE_TO_FLAG = {
     FORECAST_DAILY: WeatherEntityFeature.FORECAST_DAILY,

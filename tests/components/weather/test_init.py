@@ -34,6 +34,9 @@ from homeassistant.components.weather.const import (
     ATTR_WEATHER_CLOUD_COVERAGE,
     ATTR_WEATHER_DEW_POINT,
     ATTR_WEATHER_HUMIDITY,
+    FORECAST_DAILY,
+    FORECAST_HOURLY,
+    FORECAST_TWICE_DAILY,
 )
 from homeassistant.const import (
     PRECISION_HALVES,
@@ -588,7 +591,7 @@ async def test_forecast_twice_daily_missing_is_daytime(
     await client.send_json_auto_id(
         {
             "type": "weather/subscribe_forecast",
-            "forecast_type": "twice_daily",
+            "forecast_type": FORECAST_TWICE_DAILY,
             "entity_id": entity0.entity_id,
         }
     )
@@ -614,10 +617,10 @@ async def test_forecast_twice_daily_missing_is_daytime(
 @pytest.mark.parametrize(
     ("forecast_type", "supported_features"),
     [
-        ("daily", WeatherEntityFeature.FORECAST_DAILY),
-        ("hourly", WeatherEntityFeature.FORECAST_HOURLY),
+        (FORECAST_DAILY, WeatherEntityFeature.FORECAST_DAILY),
+        (FORECAST_HOURLY, WeatherEntityFeature.FORECAST_HOURLY),
         (
-            "twice_daily",
+            FORECAST_TWICE_DAILY,
             WeatherEntityFeature.FORECAST_TWICE_DAILY,
         ),
     ],
@@ -717,7 +720,7 @@ async def test_get_forecast_no_forecast(
         service,
         {
             "entity_id": entity0.entity_id,
-            "type": "daily",
+            "type": FORECAST_DAILY,
         },
         blocking=True,
         return_response=True,
@@ -735,9 +738,9 @@ async def test_get_forecast_no_forecast(
 @pytest.mark.parametrize(
     ("supported_features", "forecast_types"),
     [
-        (WeatherEntityFeature.FORECAST_DAILY, ["hourly", "twice_daily"]),
-        (WeatherEntityFeature.FORECAST_HOURLY, ["daily", "twice_daily"]),
-        (WeatherEntityFeature.FORECAST_TWICE_DAILY, ["daily", "hourly"]),
+        (WeatherEntityFeature.FORECAST_DAILY, [FORECAST_HOURLY, FORECAST_TWICE_DAILY]),
+        (WeatherEntityFeature.FORECAST_HOURLY, [FORECAST_DAILY, FORECAST_TWICE_DAILY]),
+        (WeatherEntityFeature.FORECAST_TWICE_DAILY, [FORECAST_DAILY, FORECAST_HOURLY]),
     ],
 )
 async def test_get_forecast_unsupported(
@@ -816,7 +819,7 @@ async def test_issue_deprecated_service_weather_get_forecast(
         LEGACY_SERVICE_GET_FORECAST,
         {
             "entity_id": entity0.entity_id,
-            "type": "daily",
+            "type": FORECAST_DAILY,
         },
         blocking=True,
         return_response=True,

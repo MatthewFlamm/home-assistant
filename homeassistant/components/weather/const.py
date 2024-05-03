@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from enum import IntFlag
-from typing import Final
+from typing import Final, Literal
 
 from homeassistant.const import (
     UnitOfLength,
@@ -28,6 +28,16 @@ class WeatherEntityFeature(IntFlag):
     FORECAST_HOURLY = 2
     FORECAST_TWICE_DAILY = 4
 
+
+FORECAST_TYPE = Literal["daily", "hourly", "twice_daily"]
+FORECAST_DAILY: Final = "daily"
+FORECAST_HOURLY: Final = "hourly"
+FORECAST_TWICE_DAILY: Final = "twice_daily"
+FORECASTS: tuple[FORECAST_TYPE, FORECAST_TYPE, FORECAST_TYPE] = (
+    FORECAST_DAILY,
+    FORECAST_HOURLY,
+    FORECAST_TWICE_DAILY,
+)
 
 ATTR_WEATHER_HUMIDITY = "humidity"
 ATTR_WEATHER_OZONE = "ozone"

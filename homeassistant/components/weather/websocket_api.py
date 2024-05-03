@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 import voluptuous as vol
 
@@ -12,12 +12,16 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util.json import JsonValueType
 
-from .const import DOMAIN, VALID_UNITS, WeatherEntityFeature
+from .const import (DOMAIN, VALID_UNITS, WeatherEntityFeature, FORECAST_DAILY,
+    FORECAST_HOURLY,
+    FORECAST_TWICE_DAILY,
+    FORECAST_TYPE,
+    FORECASTS,)
 
 FORECAST_TYPE_TO_FLAG = {
-    "daily": WeatherEntityFeature.FORECAST_DAILY,
-    "hourly": WeatherEntityFeature.FORECAST_HOURLY,
-    "twice_daily": WeatherEntityFeature.FORECAST_TWICE_DAILY,
+    FORECAST_DAILY: WeatherEntityFeature.FORECAST_DAILY,
+    FORECAST_HOURLY: WeatherEntityFeature.FORECAST_HOURLY,
+    FORECAST_TWICE_DAILY: WeatherEntityFeature.FORECAST_TWICE_DAILY,
 }
 
 
@@ -48,7 +52,7 @@ def ws_convertible_units(
     {
         vol.Required("type"): "weather/subscribe_forecast",
         vol.Required("entity_id"): cv.entity_domain(DOMAIN),
-        vol.Required("forecast_type"): vol.In(["daily", "hourly", "twice_daily"]),
+        vol.Required("forecast_type"): vol.In(FORECASTS),
     }
 )
 @websocket_api.async_response
@@ -60,7 +64,7 @@ async def ws_subscribe_forecast(
 
     component: EntityComponent[WeatherEntity] = hass.data[DOMAIN]
     entity_id: str = msg["entity_id"]
-    forecast_type: Literal["daily", "hourly", "twice_daily"] = msg["forecast_type"]
+    forecast_type: FORECAST_TYPE = msg["forecast_type"]
 
     if not (entity := component.get_entity(msg["entity_id"])):
         connection.send_error(

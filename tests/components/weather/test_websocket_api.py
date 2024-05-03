@@ -1,7 +1,10 @@
 """Test the weather websocket API."""
 
-from homeassistant.components.weather import Forecast, WeatherEntityFeature
-from homeassistant.components.weather.const import DOMAIN
+from homeassistant.components.weather import (
+    Forecast,
+    WeatherEntityFeature,
+)
+from homeassistant.components.weather.const import DOMAIN, FORECAST_DAILY
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
@@ -64,7 +67,7 @@ async def test_subscribe_forecast(
     await client.send_json_auto_id(
         {
             "type": "weather/subscribe_forecast",
-            "forecast_type": "daily",
+            "forecast_type": FORECAST_DAILY,
             "entity_id": weather_entity.entity_id,
         }
     )
@@ -78,7 +81,7 @@ async def test_subscribe_forecast(
     assert msg["type"] == "event"
     forecast = msg["event"]
     assert forecast == {
-        "type": "daily",
+        "type": FORECAST_DAILY,
         "forecast": [
             {
                 "cloud_coverage": None,
@@ -94,14 +97,14 @@ async def test_subscribe_forecast(
     msg = await client.receive_json()
     assert msg["event"] == forecast
 
-    await weather_entity.async_update_listeners(["daily"])
+    await weather_entity.async_update_listeners([FORECAST_DAILY])
     msg = await client.receive_json()
     assert msg["event"] == forecast
 
     weather_entity.forecast_list = None
     await weather_entity.async_update_listeners(None)
     msg = await client.receive_json()
-    assert msg["event"] == {"type": "daily", "forecast": None}
+    assert msg["event"] == {"type": FORECAST_DAILY, "forecast": None}
 
 
 async def test_subscribe_forecast_unknown_entity(
@@ -117,7 +120,7 @@ async def test_subscribe_forecast_unknown_entity(
     await client.send_json_auto_id(
         {
             "type": "weather/subscribe_forecast",
-            "forecast_type": "daily",
+            "forecast_type": FORECAST_DAILY,
             "entity_id": "weather.unknown",
         }
     )
@@ -149,7 +152,7 @@ async def test_subscribe_forecast_unsupported(
     await client.send_json_auto_id(
         {
             "type": "weather/subscribe_forecast",
-            "forecast_type": "daily",
+            "forecast_type": FORECAST_DAILY,
             "entity_id": weather_entity.entity_id,
         }
     )

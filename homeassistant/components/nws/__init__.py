@@ -64,6 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             nws_data.update_observation,
             RETRY_INTERVAL,
             RETRY_STOP,
+            retry_no_data=True,
             start_time=utcnow() - UPDATE_TIME_PERIOD,
         )
 
@@ -73,6 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             nws_data.update_forecast,
             RETRY_INTERVAL,
             RETRY_STOP,
+            retry_no_data=True,
         )
 
     async def update_forecast_hourly() -> None:
@@ -81,6 +83,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             nws_data.update_forecast_hourly,
             RETRY_INTERVAL,
             RETRY_STOP,
+            retry_no_data=True,
         )
 
     coordinator_observation = TimestampDataUpdateCoordinator(

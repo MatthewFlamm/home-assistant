@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from types import MappingProxyType
 from typing import Any
 
@@ -137,6 +138,12 @@ SENSOR_TYPES: tuple[NWSSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.METERS,
         unit_convert=UnitOfLength.MILES,
     ),
+    NWSSensorEntityDescription(
+        key="timestamp",
+        name="Observation Time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        native_unit_of_measurement=None,
+    ),
 )
 
 
@@ -190,7 +197,7 @@ class NWSSensor(CoordinatorEntity[TimestampDataUpdateCoordinator[None]], SensorE
         )
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> datetime | float | None:
         """Return the state."""
         if (
             not (observation := self._nws.observation)
@@ -223,4 +230,6 @@ class NWSSensor(CoordinatorEntity[TimestampDataUpdateCoordinator[None]], SensorE
             return round(value, 1)
         if unit_of_measurement == PERCENTAGE:
             return round(value)
+        if self.entity_description.key == "timestamp":
+            return datetime.fromisoformat(value)
         return value

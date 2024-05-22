@@ -77,6 +77,7 @@ SENSOR_EXPECTED_OBSERVATION_METRIC = {
     "barometricPressure": "100000",
     "seaLevelPressure": "100000",
     "visibility": "10000",
+    "timestamp": "2019-08-12T23:53:00+00:00",
 }
 
 SENSOR_EXPECTED_OBSERVATION_IMPERIAL = {
@@ -137,6 +138,7 @@ SENSOR_EXPECTED_OBSERVATION_IMPERIAL = {
     "visibility": str(
         round(DistanceConverter.convert(10000, UnitOfLength.METERS, UnitOfLength.MILES))
     ),
+    "timestamp": "2019-08-12T23:53:00+00:00",
 }
 
 WEATHER_EXPECTED_OBSERVATION_IMPERIAL = {
